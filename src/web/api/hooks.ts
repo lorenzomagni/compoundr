@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 
 export const queryKeys = {
@@ -6,6 +6,7 @@ export const queryKeys = {
   analysis: (ticker: string) => ["analysis", ticker] as const,
   watchlist: ["watchlist"] as const,
   status: ["status"] as const,
+  snapshots: (ticker: string) => ["snapshots", ticker] as const,
 };
 
 export function useCompanies() {
@@ -17,6 +18,21 @@ export function useAnalysis(ticker: string) {
     queryKey: queryKeys.analysis(ticker),
     queryFn: () => api.get<AnalysisResponse>(`/companies/${encodeURIComponent(ticker)}/analysis`),
     enabled: ticker.length > 0,
+  });
+}
+
+export function useSnapshots(ticker: string) {
+  return useQuery({
+    queryKey: queryKeys.snapshots(ticker),
+    queryFn: () => api.get<SnapshotSummary[]>(`/companies/${encodeURIComponent(ticker)}/snapshots`),
+  });
+}
+
+export function useSaveSnapshot(ticker: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ id: string }>(`/companies/${encodeURIComponent(ticker)}/snapshots`),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.snapshots(ticker) }),
   });
 }
 
@@ -48,6 +64,16 @@ export interface AnalysisResponse {
     criteria: { id: string; area: string; outcome: string }[];
     score: CompanySummary["score"];
   };
+  summary: { price: number | null; dividendYield: number | null };
+  history: { year: number; netIncome: number | null; roe: number | null; operatingMargin: number | null; dividendPerShare: number | null }[];
+  freshness: { edgar: { fetchedAt: string; expired: boolean } | null; fmp: { fetchedAt: string; expired: boolean } | null };
+}
+
+export interface SnapshotSummary {
+  id: string;
+  ticker: string;
+  createdAt: string;
+  criteriaVersion: string;
 }
 
 export interface StatusResponse {

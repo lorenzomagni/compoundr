@@ -31,4 +31,27 @@ describe("buildAnalysis", () => {
       expect(m.catalog.whyItMatters.length).toBeGreaterThan(20);
     }
   });
+
+  it("summary exposes the last price and the dividend yield", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    const view = buildAnalysis("KO", { repos });
+    expect(view.summary.price).toBe(62);
+    expect(view.summary.dividendYield).toBeCloseTo(0.49 / 62, 6);
+  });
+
+  it("history gives ROE and dividend per share for every fiscal year", () => {
+    seedKo(repos, { dividends: [] });
+    const view = buildAnalysis("KO", { repos });
+    expect(view.history).toHaveLength(10);
+    expect(view.history[0]!.roe).toBeCloseTo(8000 / 20000, 6);
+    expect(view.history[0]!.dividendPerShare).toBe(1.8);
+  });
+
+  it("freshness reports when market data was fetched and whether it has expired", () => {
+    seedKo(repos, { dividends: [] });
+    repos.cache.set("fmp:prices:KO", "[]", "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
+    const view = buildAnalysis("KO", { repos });
+    expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true });
+    expect(view.freshness.edgar).toBeNull();
+  });
 });

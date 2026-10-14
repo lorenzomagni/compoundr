@@ -20,6 +20,20 @@ export interface FinancialYear {
   depreciation: number | null;
   capex: number | null;
   shares: number | null;
+  dividendPerShare: number | null;
+}
+
+export interface HistoryPoint {
+  year: number;
+  netIncome: number | null;
+  roe: number | null;
+  operatingMargin: number | null;
+  dividendPerShare: number | null;
+}
+
+export interface Freshness {
+  fetchedAt: string;
+  expired: boolean;
 }
 
 export interface AnalysisView {
@@ -27,7 +41,14 @@ export interface AnalysisView {
   criteriaVersion: string;
   metrics: (Metric & { catalog: CatalogEntry })[];
   result: AnalysisResult;
+  summary: { price: number | null; dividendYield: number | null };
+  history: HistoryPoint[];
+  freshness: { edgar: Freshness | null; fmp: Freshness | null };
 }
+
+// Cache entries record when data was fetched and when it expires; the UI shows both.
+const toFreshness = (entry: { fetchedAt: string; expiresAt: string } | undefined): Freshness | null =>
+  entry ? { fetchedAt: entry.fetchedAt, expired: Date.now() >= Date.parse(entry.expiresAt) } : null;
 
 const SOURCES: Record<string, string[]> = {
   roeAverage10y: ["SEC EDGAR"],
@@ -66,6 +87,7 @@ function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
         depreciation: c.get("DepreciationDepletionAndAmortization") ?? null,
         capex,
         shares: c.get("WeightedAverageNumberOfDilutedSharesOutstanding") ?? null,
+        dividendPerShare: c.get("CommonStockDividendsPerShareDeclared") ?? null,
       };
     });
 }
@@ -136,10 +158,27 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
     catalog: CATALOG[m.id as MetricId],
   }));
 
+  const history: HistoryPoint[] = years.map((y) => ({
+    year: y.fiscalYear,
+    netIncome: y.netIncome,
+    roe: y.netIncome !== null && y.equity !== null && y.equity > 0 ? y.netIncome / y.equity : null,
+    operatingMargin: y.operatingIncome !== null && y.revenue ? y.operatingIncome / y.revenue : null,
+    dividendPerShare: y.dividendPerShare,
+  }));
+
+  const fmpEntry = repos.cache.get(`fmp:prices:${ticker}`);
+  const edgarEntry = company.cik ? repos.cache.get(`edgar:facts:${company.cik}`) : undefined;
+
   return {
     ticker,
     criteriaVersion: CRITERIA_V1.version,
     metrics,
     result: evaluate(metrics, CRITERIA_V1),
+    summary: {
+      price: currentPrice,
+      dividendYield: latestDividend !== null && currentPrice ? latestDividend / currentPrice : null,
+    },
+    history,
+    freshness: { edgar: toFreshness(edgarEntry), fmp: toFreshness(fmpEntry) },
   };
 }
