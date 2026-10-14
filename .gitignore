@@ -1,0 +1,10 @@
+node_modules
+dist
+data/
+config/local.json
+*.db
+.superpowers/
+playwright-report/
+test-results/
+.claude/
+.idea/

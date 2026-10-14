@@ -1,0 +1,6 @@
+{
+  "fmpApiKey": "e2e-placeholder-not-a-real-key",
+  "edgarUserAgent": "Compoundr e2e test@example.com",
+  "dbPath": "data/e2e.db",
+  "port": 3100
+}

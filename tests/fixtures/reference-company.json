@@ -1,0 +1,11 @@
+{
+  "description": "Valori scritti a mano per verificare le formule. Cinque anni con ROE 0.10, 0.15, 0.10, 0.15, 0.10: media 0.12.",
+  "annual": [
+    { "fiscalYear": 2020, "netIncome": 10, "equity": 100, "operatingIncome": 20, "revenue": 200 },
+    { "fiscalYear": 2021, "netIncome": 15, "equity": 100, "operatingIncome": 20, "revenue": 200 },
+    { "fiscalYear": 2022, "netIncome": 10, "equity": 100, "operatingIncome": 20, "revenue": 200 },
+    { "fiscalYear": 2023, "netIncome": 15, "equity": 100, "operatingIncome": 20, "revenue": 200 },
+    { "fiscalYear": 2024, "netIncome": 10, "equity": 100, "operatingIncome": 20, "revenue": 200 }
+  ],
+  "expected": { "roeAverage": 0.12 }
+}
