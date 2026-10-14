@@ -8,7 +8,8 @@ import { buildServer } from "./api/routes";
 
 // The server listens on 127.0.0.1 only: the app is local and the API must not be reachable from the network.
 async function main() {
-  const config = loadConfig();
+  // COMPOUNDR_CONFIG lets the end-to-end suite point at its own config; the default is config/local.json.
+  const config = loadConfig(process.env.COMPOUNDR_CONFIG);
   const repos = createRepositories(openDb(config.dbPath));
   const cache = createCache(repos.cache);
   const edgar = createEdgarClient({ userAgent: config.edgarUserAgent });

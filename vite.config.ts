@@ -7,6 +7,6 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
-    proxy: { "/api": "http://127.0.0.1:3000" },
+    proxy: { "/api": `http://127.0.0.1:${process.env.COMPOUNDR_PORT ?? 3000}` },
   },
 });
