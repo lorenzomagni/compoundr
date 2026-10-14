@@ -140,3 +140,18 @@ td a:hover { color: var(--accent); }
 .snapshots { display: flex; flex-direction: column; gap: 14px; }
 .snapshot-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .snapshot-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+
+/* Watchlist and compare */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.watch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.watch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.watch-head { display: flex; justify-content: space-between; align-items: center; }
+.watch-head a { color: var(--text); font-weight: 700; text-decoration: none; }
+.watch-head a:hover { color: var(--accent); }
+.link-btn { font: inherit; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.link-btn:hover { color: var(--fail); }
+.field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 0.85rem; }
+.field textarea { font: inherit; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; resize: vertical; }
+.compare-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.compare-table th, .compare-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+.compare-table th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }

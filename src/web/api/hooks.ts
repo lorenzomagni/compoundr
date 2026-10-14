@@ -25,6 +25,7 @@ export function useSnapshots(ticker: string) {
   return useQuery({
     queryKey: queryKeys.snapshots(ticker),
     queryFn: () => api.get<SnapshotSummary[]>(`/companies/${encodeURIComponent(ticker)}/snapshots`),
+    enabled: ticker.length > 0,
   });
 }
 
