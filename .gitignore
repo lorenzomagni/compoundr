@@ -6,3 +6,5 @@ config/local.json
 .superpowers/
 playwright-report/
 test-results/
+.claude/
+.idea/
