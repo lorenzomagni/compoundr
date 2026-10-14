@@ -43,3 +43,26 @@ describe("cache", () => {
     expect(repos.cache.get("k")?.payload).toBe("{\"a\":1}");
   });
 });
+
+describe("prices and dividends", () => {
+  it("upserts prices and dividends for a ticker and lists them back", () => {
+    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }]);
+    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }]);
+    expect(repos.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60 }]);
+    expect(repos.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49 }]);
+  });
+});
+
+describe("withTransaction", () => {
+  it("rolls back every write made inside it when one of them fails", () => {
+    expect(() =>
+      repos.withTransaction(() => {
+        repos.fundamentals.upsertMany([
+          { ticker: "KO", fiscalYear: 2024, concept: "NetIncomeLoss", value: 1, form: "10-K", filedAt: "2025-02-01" },
+        ]);
+        repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: null as unknown as number }]);
+      }),
+    ).toThrow(/NOT NULL|constraint/i);
+    expect(repos.fundamentals.listForTicker("KO")).toHaveLength(0);
+  });
+});

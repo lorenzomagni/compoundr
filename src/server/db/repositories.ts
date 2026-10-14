@@ -20,6 +20,16 @@ export interface FundamentalRow {
   filedAt: string;
 }
 
+export interface PriceRow {
+  date: string;
+  close: number;
+}
+
+export interface DividendRow {
+  exDate: string;
+  amount: number;
+}
+
 export interface CacheEntry {
   payload: string;
   fetchedAt: string;
@@ -53,10 +63,20 @@ export interface Repositories {
     upsertMany(rows: FundamentalRow[]): void;
     listForTicker(ticker: string): FundamentalRow[];
   };
+  prices: {
+    upsertMany(ticker: string, rows: PriceRow[]): void;
+    listForTicker(ticker: string): PriceRow[];
+  };
+  dividends: {
+    upsertMany(ticker: string, rows: DividendRow[]): void;
+    listForTicker(ticker: string): DividendRow[];
+  };
   cache: {
     get(key: string): CacheEntry | undefined;
     set(key: string, payload: string, fetchedAt: string, expiresAt: string): void;
   };
+  // Runs fn in one SQLite transaction: any throw rolls back every write made inside it.
+  withTransaction<T>(fn: () => T): T;
   watchlist: {
     add(ticker: string, tags: string[], notes: string, reviewAt?: string | null): void;
     list(): WatchlistRow[];
@@ -109,6 +129,23 @@ export function createRepositories(db: Database.Database): Repositories {
           ticker: r.ticker, fiscalYear: r.fiscal_year, concept: r.concept, value: r.value, form: r.form, filedAt: r.filed_at,
         })),
     },
+    prices: {
+      upsertMany: (ticker, rows) => {
+        const stmt = db.prepare("INSERT OR REPLACE INTO prices (ticker, date, close) VALUES (?, ?, ?)");
+        for (const r of rows) stmt.run(ticker, r.date, r.close);
+      },
+      listForTicker: (ticker) =>
+        db.prepare("SELECT date, close FROM prices WHERE ticker = ? ORDER BY date").all(ticker) as PriceRow[],
+    },
+    dividends: {
+      upsertMany: (ticker, rows) => {
+        const stmt = db.prepare("INSERT OR REPLACE INTO dividends (ticker, ex_date, amount) VALUES (?, ?, ?)");
+        for (const r of rows) stmt.run(ticker, r.exDate, r.amount);
+      },
+      listForTicker: (ticker) =>
+        db.prepare("SELECT ex_date AS exDate, amount FROM dividends WHERE ticker = ? ORDER BY ex_date").all(ticker) as DividendRow[],
+    },
+    withTransaction: <T>(fn: () => T): T => db.transaction(fn)(),
     cache: {
       get: (key) => {
         const r: any = db.prepare("SELECT payload, fetched_at, expires_at FROM cache WHERE key = ?").get(key);
