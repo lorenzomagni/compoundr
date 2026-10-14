@@ -58,7 +58,7 @@ tbody td {
 tbody tr:hover td { background: var(--surface-raised); }
 
 td a { color: var(--text); font-weight: 600; text-decoration: none; }
-td a:hover { color: var(--accent); }
+td a:hover { color: var(--accent-ink); }
 
 .chip {
   display: inline-flex;
@@ -70,9 +70,9 @@ td a:hover { color: var(--accent); }
   border-radius: 999px;
   border: 1px solid transparent;
 }
-.chip-pass { color: var(--pass); background: color-mix(in srgb, var(--pass) 14%, transparent); }
-.chip-fail { color: var(--fail); background: color-mix(in srgb, var(--fail) 14%, transparent); }
-.chip-missing { color: var(--missing); background: color-mix(in srgb, var(--missing) 14%, transparent); }
+.chip-pass { color: var(--pass-ink); background: color-mix(in srgb, var(--pass) 14%, transparent); }
+.chip-fail { color: var(--fail-ink); background: color-mix(in srgb, var(--fail) 14%, transparent); }
+.chip-missing { color: var(--missing-ink); background: color-mix(in srgb, var(--missing) 14%, transparent); }
 .chip-na { color: var(--muted); background: var(--surface-raised); border-color: var(--border); }
 
 /* Company detail */
@@ -126,8 +126,8 @@ td a:hover { color: var(--accent); }
 
 .btn {
   font: inherit;
-  color: var(--bg);
-  background: var(--accent);
+  color: var(--on-accent);
+  background: var(--accent-solid);
   border: none;
   border-radius: 10px;
   padding: 9px 16px;
@@ -147,7 +147,7 @@ td a:hover { color: var(--accent); }
 .watch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .watch-head { display: flex; justify-content: space-between; align-items: center; }
 .watch-head a { color: var(--text); font-weight: 700; text-decoration: none; }
-.watch-head a:hover { color: var(--accent); }
+.watch-head a:hover { color: var(--accent-ink); }
 .link-btn { font: inherit; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .link-btn:hover { color: var(--fail); }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 0.85rem; }

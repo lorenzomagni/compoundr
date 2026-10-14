@@ -4,12 +4,10 @@
   --radius: 14px;
   --gutter: 16px;
   --accent: #34d399;
-  --pass: #34d399;
-  --fail: #f87171;
-  --missing: #fbbf24;
   --transition: 180ms ease-out;
 }
 
+/* Ink tokens are the colours used for text on tinted or light backgrounds; they meet WCAG AA in each theme. */
 :root:not([data-theme="light"]) {
   --bg: #0b0f14;
   --surface: #121821;
@@ -17,6 +15,15 @@
   --border: #1f2a37;
   --text: #e6edf5;
   --muted: #8593a6;
+  --pass: #34d399;
+  --fail: #f87171;
+  --missing: #fbbf24;
+  --pass-ink: #34d399;
+  --fail-ink: #f87171;
+  --missing-ink: #fbbf24;
+  --accent-ink: #34d399;
+  --accent-solid: #34d399;
+  --on-accent: #0b0f14;
 }
 
 @media (prefers-color-scheme: light) {
@@ -27,6 +34,15 @@
     --border: #dde3eb;
     --text: #0f172a;
     --muted: #5b6878;
+    --pass: #047857;
+    --fail: #b91c1c;
+    --missing: #92400e;
+    --pass-ink: #065f46;
+    --fail-ink: #b91c1c;
+    --missing-ink: #92400e;
+    --accent-ink: #065f46;
+  --accent-solid: #065f46;
+    --on-accent: #ffffff;
   }
 }
 
@@ -37,6 +53,15 @@
   --border: #dde3eb;
   --text: #0f172a;
   --muted: #5b6878;
+  --pass: #047857;
+  --fail: #b91c1c;
+  --missing: #92400e;
+  --pass-ink: #065f46;
+  --fail-ink: #b91c1c;
+  --missing-ink: #92400e;
+  --accent-ink: #065f46;
+  --accent-solid: #065f46;
+  --on-accent: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -46,6 +71,15 @@
   --border: #1f2a37;
   --text: #e6edf5;
   --muted: #8593a6;
+  --pass: #34d399;
+  --fail: #f87171;
+  --missing: #fbbf24;
+  --pass-ink: #34d399;
+  --fail-ink: #f87171;
+  --missing-ink: #fbbf24;
+  --accent-ink: #34d399;
+  --accent-solid: #34d399;
+  --on-accent: #0b0f14;
 }
 
 * { box-sizing: border-box; }
