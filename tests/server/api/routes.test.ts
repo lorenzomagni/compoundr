@@ -29,6 +29,11 @@ beforeEach(async () => {
     edgar: { tickerToCik: async () => null, fetchFundamentals: async () => [] } as any,
     fmp: fakeFmp(),
     apiKeyConfigured: true,
+    userAgent: "Compoundr test test@example.com",
+    // The universe test must not reach the network: the bundled snapshot is used instead.
+    fetchFn: (async () => {
+      throw new Error("offline");
+    }) as unknown as typeof fetch,
   });
 });
 

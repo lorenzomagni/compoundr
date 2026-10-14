@@ -111,6 +111,11 @@ export function Explore() {
         </button>
       </div>
       {refreshUniverse.error && <p role="alert">{(refreshUniverse.error as Error).message}</p>}
+      {refreshUniverse.data && (
+        <p role="status" className="muted">
+          Elenco aggiornato: {refreshUniverse.data.count} titoli, fonte {refreshUniverse.data.source === "wikipedia" ? "Wikipedia (online)" : `copia del progetto del ${refreshUniverse.data.asOf}`}.
+        </p>
+      )}
 
       {error && <p role="alert">Impossibile caricare le aziende: {(error as Error).message}</p>}
       {isLoading && <p className="muted">Caricamento…</p>}

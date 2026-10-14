@@ -40,7 +40,7 @@ Avvia il server locale (http://127.0.0.1:3000) e l'interfaccia (http://127.0.0.1
 
 ## Primo utilizzo
 
-Al primo avvio l'elenco dei titoli è vuoto. Dalla schermata Esplora premi **Aggiorna elenco S&P 500**. Per ogni azienda, nel dettaglio premi **Aggiorna dati** per scaricare bilanci e, se configurata, quotazioni e dividendi.
+Al primo avvio l'elenco dei titoli è vuoto. Dalla schermata Esplora premi **Aggiorna elenco S&P 500**: l'app legge la lista dei 503 titoli dalla pagina Wikipedia dell'indice. Se la pagina non risponde, usa la copia inclusa nel progetto (`src/server/data/sp500-snapshot.json`), e l'interfaccia lo segnala. Per ogni azienda, nel dettaglio premi **Aggiorna dati** per scaricare bilanci e, se configurata, quotazioni e dividendi.
 
 ## Verifica
 

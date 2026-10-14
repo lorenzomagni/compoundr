@@ -15,7 +15,14 @@ async function main() {
   const edgar = createEdgarClient({ userAgent: config.edgarUserAgent });
   const fmp = createFmpClient({ apiKey: config.fmpApiKey, cache: repos.cache });
 
-  const app = await buildServer({ repos, cache, edgar, fmp, apiKeyConfigured: config.fmpApiKey !== null });
+  const app = await buildServer({
+    repos,
+    cache,
+    edgar,
+    fmp,
+    apiKeyConfigured: config.fmpApiKey !== null,
+    userAgent: config.edgarUserAgent,
+  });
   await app.listen({ host: "127.0.0.1", port: config.port });
   console.log(`Compoundr in ascolto su http://127.0.0.1:${config.port}`);
 }

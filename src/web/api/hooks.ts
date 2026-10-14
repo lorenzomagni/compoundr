@@ -50,7 +50,7 @@ export function useRefreshCompany(ticker: string) {
 export function useRefreshUniverse() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<{ count: number }>("/universe/refresh"),
+    mutationFn: () => api.post<{ count: number; source: "wikipedia" | "snapshot"; asOf: string | null }>("/universe/refresh"),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: queryKeys.companies });
     },

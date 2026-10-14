@@ -14,6 +14,9 @@ export interface ApiDeps {
   edgar: EdgarClient;
   fmp: FmpClient;
   apiKeyConfigured: boolean;
+  // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
+  userAgent: string;
+  fetchFn?: typeof fetch;
 }
 
 const WatchlistInput = z.object({
@@ -33,7 +36,7 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, edgar, fmp, apiKeyConfigured } = deps;
+  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent, fetchFn = fetch } = deps;
   const app = Fastify({ logger: false });
 
   // Errors are returned with a message only, never stack traces or request data.
@@ -68,7 +71,7 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     }
   });
 
-  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, fmp }));
+  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, fetchFn, userAgent }));
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/snapshots", async (req, reply) => {
     try {
