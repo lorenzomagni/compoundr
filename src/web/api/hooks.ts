@@ -40,7 +40,10 @@ export function useSaveSnapshot(ticker: string) {
 export function useRefreshCompany(ticker: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<{ stale: boolean }>(`/companies/${encodeURIComponent(ticker)}/refresh`),
+    mutationFn: () =>
+      api.post<{ stale: boolean; sources: { edgar: string; fmp: string; fmpReason?: string } }>(
+        `/companies/${encodeURIComponent(ticker)}/refresh`,
+      ),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: queryKeys.analysis(ticker) });
     },

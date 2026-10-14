@@ -103,4 +103,27 @@ describe("edgar fiscal-year alignment", () => {
     const rows = await client.fetchFundamentals("2");
     expect(rows).toEqual([expect.objectContaining({ fiscalYear: 2024, concept: "RevenueFromContractWithCustomerExcludingAssessedTax", value: 45000 })]);
   });
+
+  it("accepts SEC facts whose fiscal year or period is null, as the live API sends them", async () => {
+    const filing = {
+      cik: 3,
+      entityName: "Synthetic",
+      facts: {
+        "us-gaap": {
+          AccountsPayableCurrent: {
+            label: "Payables",
+            units: {
+              USD: [
+                { end: "2024-12-31", val: 120, accn: "C24", fy: null, fp: null, form: "10-K", filed: "2025-02-10" },
+                { end: "2024-12-31", val: 130, accn: "C24b", fy: 2024, fp: "FY", form: "10-K", filed: "2025-02-11" },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const { fetchFn } = recordedFetch({ [facts("3")]: filing });
+    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    await expect(client.fetchFundamentals("3")).resolves.toBeDefined();
+  });
 });

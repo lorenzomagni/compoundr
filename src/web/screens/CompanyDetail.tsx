@@ -50,6 +50,11 @@ export function CompanyDetail() {
           Aggiorna dati
         </button>
         {refresh.error && <span role="alert">{(refresh.error as Error).message}</span>}
+        {refresh.data?.sources.fmp === "missing" && (
+          <p role="status" className="muted">
+            Prezzi e dividendi non disponibili per questo titolo: il piano gratuito di FMP non li include. I bilanci SEC sono aggiornati.
+          </p>
+        )}
       </div>
 
       <StaleBanner freshness={data.freshness} />

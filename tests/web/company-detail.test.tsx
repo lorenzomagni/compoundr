@@ -122,4 +122,19 @@ describe("Company detail screen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Aggiorna dati" }));
     expect(calls).toContain("POST /api/companies/KO/refresh");
   });
+
+  it("after a refresh, a market-data limit of the free plan is shown in plain words", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "missing", fmpReason: "FMP non include questo dato nel piano gratuito (risposta 402)" } });
+        }
+        return json(analysis(false));
+      }),
+    );
+    renderWith(analysis(false));
+    await userEvent.click(screen.getByRole("button", { name: "Aggiorna dati" }));
+    expect(await screen.findByText(/prezzi e dividendi non disponibili/i)).toBeInTheDocument();
+  });
 });

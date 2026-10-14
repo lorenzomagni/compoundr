@@ -42,12 +42,13 @@ const Fact = z.object({
   end: z.string(),
   val: z.number(),
   accn: z.string(),
-  fy: z.number().optional(),
-  fp: z.string().optional(),
-  form: z.string(),
+  // The live API sends null for these on some facts: accept them and let the filters skip the fact.
+  fy: z.number().nullish(),
+  fp: z.string().nullish(),
+  form: z.string().nullish(),
   filed: z.string(),
 });
-const Concept = z.object({ label: z.string().optional(), units: z.record(z.string(), z.array(Fact)) });
+const Concept = z.object({ label: z.string().nullish(), units: z.record(z.string(), z.array(Fact)) });
 const CompanyFacts = z.object({
   cik: z.number(),
   entityName: z.string().optional(),
@@ -115,7 +116,7 @@ export function createEdgarClient({ userAgent, fetch: fetchFn = fetch, perSecond
           const key = `${fiscalYear}|${concept}`;
           const prev = byKey.get(key);
           if (!prev || f.filed > prev.filedAt) {
-            byKey.set(key, { fiscalYear, concept, value: f.val, form: f.form, filedAt: f.filed });
+            byKey.set(key, { fiscalYear, concept, value: f.val, form: "10-K", filedAt: f.filed });
           }
         }
       }

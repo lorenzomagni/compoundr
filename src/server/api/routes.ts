@@ -67,7 +67,12 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     try {
       return await refreshCompany(req.params.ticker, { repos, cache, edgar, fmp });
     } catch (error) {
-      return reply.code(422).send({ message: (error as Error).message });
+      // A malformed SEC or FMP payload is shown as one readable sentence, never as the raw validation dump.
+      const message =
+        error instanceof ZodError
+          ? `I dati SEC per ${req.params.ticker} non hanno il formato atteso: riprova più tardi`
+          : (error as Error).message;
+      return reply.code(422).send({ message });
     }
   });
 

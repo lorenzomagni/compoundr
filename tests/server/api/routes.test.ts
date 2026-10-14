@@ -4,6 +4,7 @@ import { createRepositories, type Repositories } from "../../../src/server/db/re
 import { createCache } from "../../../src/server/providers/cache";
 import { buildServer } from "../../../src/server/api/routes";
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { seedKo } from "../services/fixtures";
 
 const SECRET_KEY = "FMP-SECRET-KEY-42";
@@ -128,5 +129,32 @@ describe("local HTTP API", () => {
     const ko = res.json().find((w: any) => w.ticker === "KO");
     expect(ko.lastSnapshot).toMatchObject({ pass: 1, evaluated: 2 });
     expect(ko.currentScore).toMatchObject({ evaluated: expect.any(Number) });
+  });
+
+  it("a SEC response in an unexpected shape is reported as a short Italian message, not a raw validation dump", async () => {
+    const failingEdgar = {
+      tickerToCik: async () => "21344",
+      fetchFundamentals: async () => {
+        // Same kind of failure the live API caused: a null where a number was expected.
+        return z.array(z.object({ val: z.number() })).parse([{ val: null }]);
+      },
+    } as any;
+    const failing = await buildServer({
+      repos,
+      cache: createCache(repos.cache),
+      edgar: failingEdgar,
+      fmp: fakeFmp(),
+      apiKeyConfigured: true,
+      userAgent: "Compoundr test test@example.com",
+    });
+    seedKo(repos, { dividends: [] });
+    const res = await failing.inject({ method: "POST", url: "/api/companies/KO/refresh" });
+    await failing.close();
+    const message = res.json().message as string;
+    expect(res.statusCode).toBe(422);
+    expect(message).not.toContain("\"code\"");
+    expect(message.trimStart().startsWith("[")).toBe(false);
+    expect(message.length).toBeLessThan(200);
+    expect(message).toMatch(/SEC/);
   });
 });
