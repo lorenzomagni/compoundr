@@ -7,7 +7,7 @@ import { roeAverage, marginVariability, debtYears } from "../metrics/quality";
 import { fcfConversion, ownerEarnings } from "../metrics/earnings";
 import { payoutRatio, dividendStreakYears, dividendCagr } from "../metrics/dividend";
 import { peVsAverage, pFcf } from "../metrics/valuation";
-import { mean } from "../metrics/common";
+import { insufficient, mean, MIN_YEARS } from "../metrics/common";
 
 export interface FinancialYear {
   fiscalYear: number;
@@ -81,7 +81,8 @@ function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
         netIncome: c.get("NetIncomeLoss") ?? null,
         equity: c.get("StockholdersEquity") ?? null,
         operatingIncome: c.get("OperatingIncomeLoss") ?? null,
-        revenue: c.get("Revenues") ?? null,
+        // Companies report revenue under either the classic or the ASC 606 concept.
+        revenue: c.get("Revenues") ?? c.get("RevenueFromContractWithCustomerExcludingAssessedTax") ?? null,
         longTermDebt: c.get("LongTermDebtNoncurrent") ?? null,
         fcf: ocf !== null && capex !== null ? ocf - capex : null,
         depreciation: c.get("DepreciationDepletionAndAmortization") ?? null,
@@ -138,17 +139,23 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
   const fcfPerShare = latest && latest.fcf !== null && latest.shares ? latest.fcf / latest.shares : null;
   const latestDividend = series.length > 0 ? series[series.length - 1]!.amount : null;
 
+  const peMetric =
+    historicalPe.length < MIN_YEARS && currentPe !== null
+      ? insufficient("peVsAverage", historicalPe.length)
+      : peVsAverage(currentPe, avgPe10y);
+
   const raw: Metric[] = [
     roeAverage(years),
     marginVariability(years),
     debtYears(latest?.longTermDebt ?? null, latest?.netIncome ?? null),
     fcfConversion(latest?.fcf ?? null, latest?.netIncome ?? null),
     ownerEarnings(latest?.netIncome ?? null, latest?.depreciation ?? null, latest?.capex ?? null),
-    payoutRatio(latestDividend, latest?.netIncome ?? null),
+    // Both sides per share: dividends per share over earnings per share.
+    payoutRatio(latestDividend, latestEps),
     dividendStreakYears(series),
     dividendCagr(series, 5),
     dividendCagr(series, 10),
-    peVsAverage(currentPe, avgPe10y),
+    peMetric,
     pFcf(currentPrice, fcfPerShare),
   ];
 

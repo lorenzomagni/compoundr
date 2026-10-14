@@ -11,6 +11,7 @@ export const PINNED_CONCEPTS = [
   "DepreciationDepletionAndAmortization",
   "OperatingIncomeLoss",
   "Revenues",
+  "RevenueFromContractWithCustomerExcludingAssessedTax",
   "CommonStockDividendsPerShareDeclared",
   "WeightedAverageNumberOfDilutedSharesOutstanding",
 ] as const;
@@ -94,19 +95,27 @@ export function createEdgarClient({ userAgent, fetch: fetchFn = fetch, perSecond
       const url = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik.padStart(10, "0")}.json`;
       const facts = CompanyFacts.parse(await getJson(url));
       const usGaap = facts.facts["us-gaap"] ?? {};
-      // One value per (fiscal year, concept): the most recently filed 10-K wins over earlier ones.
+      // A 10-K also reports prior-year comparatives under its own fiscal year, so keep only the period
+      // each filing is about: the latest period end within that accession. The fiscal year is the year of that end.
       const byKey = new Map<string, EdgarFundamental>();
       for (const concept of PINNED_CONCEPTS) {
         const entry = usGaap[concept];
         if (!entry) continue;
-        for (const facts10k of Object.values(entry.units)) {
-          for (const f of facts10k) {
-            if (f.form !== "10-K" || f.fp !== "FY" || f.fy === undefined) continue;
-            const key = `${f.fy}|${concept}`;
-            const prev = byKey.get(key);
-            if (!prev || f.filed > prev.filedAt) {
-              byKey.set(key, { fiscalYear: f.fy, concept, value: f.val, form: f.form, filedAt: f.filed });
-            }
+        const annual = Object.values(entry.units)
+          .flat()
+          .filter((f) => f.form === "10-K" && f.fp === "FY");
+        const latestEndByFiling = new Map<string, string>();
+        for (const f of annual) {
+          const current = latestEndByFiling.get(f.accn);
+          if (!current || f.end > current) latestEndByFiling.set(f.accn, f.end);
+        }
+        for (const f of annual) {
+          if (f.end !== latestEndByFiling.get(f.accn)) continue;
+          const fiscalYear = Number(f.end.slice(0, 4));
+          const key = `${fiscalYear}|${concept}`;
+          const prev = byKey.get(key);
+          if (!prev || f.filed > prev.filedAt) {
+            byKey.set(key, { fiscalYear, concept, value: f.val, form: f.form, filedAt: f.filed });
           }
         }
       }

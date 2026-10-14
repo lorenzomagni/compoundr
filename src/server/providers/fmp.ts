@@ -64,13 +64,14 @@ export function createFmpClient({
 
   async function get<T>(path: string, params: Record<string, string>, schema: z.ZodType<T>): Promise<T> {
     if (!apiKey) throw new FmpNoKey();
-    const used = usedToday();
-    if (used >= quotaPerDay) throw new FmpQuotaExceeded(quotaPerDay);
-    // Count the call before sending it, so failed attempts still spend the quota.
-    cache.set(quotaKey(), String(used + 1), now().toISOString(), endOfDay());
+    if (usedToday() >= quotaPerDay) throw new FmpQuotaExceeded(quotaPerDay);
 
     const query = new URLSearchParams({ ...params, apikey: apiKey });
     const body = await limiter.run(async () => {
+      // Every attempt, including retries, spends one unit of the daily quota.
+      const used = usedToday();
+      if (used >= quotaPerDay) throw new FmpQuotaExceeded(quotaPerDay);
+      cache.set(quotaKey(), String(used + 1), now().toISOString(), endOfDay());
       const res = await fetchFn(`${BASE}${path}?${query.toString()}`);
       if (!res.ok) throw new FmpHttpError(res.status);
       return res.json();

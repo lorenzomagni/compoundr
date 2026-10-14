@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { Tabs } from "radix-ui";
-import { useAnalysis, useSaveSnapshot, useSnapshots } from "../api/hooks";
+import { useAnalysis, useRefreshCompany, useSaveSnapshot, useSnapshots } from "../api/hooks";
 import { ScoreBadge } from "../components/ScoreBadge";
 import { MetricCard } from "../components/MetricCard";
 import { StaleBanner } from "../components/StaleBanner";
@@ -12,6 +12,7 @@ import { HistoryChart } from "../components/HistoryChart";
 export function CompanyDetail() {
   const { ticker = "" } = useParams();
   const { data, isLoading, error } = useAnalysis(ticker);
+  const refresh = useRefreshCompany(ticker);
 
   // Keep showing cached data if a background refetch fails; only a missing payload is an error state.
   if (!data) {
@@ -43,6 +44,13 @@ export function CompanyDetail() {
           </div>
         </dl>
       </header>
+
+      <div className="refresh-row">
+        <button type="button" className="btn" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
+          Aggiorna dati
+        </button>
+        {refresh.error && <span role="alert">{(refresh.error as Error).message}</span>}
+      </div>
 
       <StaleBanner freshness={data.freshness} />
 

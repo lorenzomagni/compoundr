@@ -54,4 +54,28 @@ describe("buildAnalysis", () => {
     expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true });
     expect(view.freshness.edgar).toBeNull();
   });
+
+  it("payout ratio compares dividend per share with earnings per share", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    const view = buildAnalysis("KO", { repos });
+    const payout = view.metrics.find((m) => m.id === "payoutRatio")!;
+    // EPS 2024 = net income 8900 / 4300 shares; dividend per share 0.49.
+    expect(payout.value).toBeCloseTo(0.49 / (8900 / 4300), 6);
+  });
+
+  it("peVsAverage needs at least 5 years of price and EPS overlap, otherwise insufficient_data", () => {
+    seedKo(repos, { dividends: [] });
+    const view = buildAnalysis("KO", { repos });
+    expect(view.metrics.find((m) => m.id === "peVsAverage")!.status).toBe("insufficient_data");
+  });
+
+  it("revenue falls back to the ASC 606 concept when the classic one is absent", () => {
+    repos.companies.upsert({ ticker: "KO", name: "Coca-Cola", cik: "21344", inSp500: true });
+    repos.fundamentals.upsertMany([
+      { ticker: "KO", fiscalYear: 2024, concept: "OperatingIncomeLoss", value: 11000, form: "10-K", filedAt: "2025-02-10" },
+      { ticker: "KO", fiscalYear: 2024, concept: "RevenueFromContractWithCustomerExcludingAssessedTax", value: 99000, form: "10-K", filedAt: "2025-02-10" },
+    ]);
+    const view = buildAnalysis("KO", { repos });
+    expect(view.history.at(-1)!.operatingMargin).toBeCloseTo(11000 / 99000, 6);
+  });
 });

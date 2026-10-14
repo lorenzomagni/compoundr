@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCompanies, type CompanySummary } from "../api/hooks";
+import { useCompanies, useRefreshUniverse, type CompanySummary } from "../api/hooks";
 import { ScoreBadge } from "../components/ScoreBadge";
 
 type Area = "quality" | "earnings" | "dividend" | "valuation";
@@ -58,6 +58,7 @@ const columns = [
 
 export function Explore() {
   const { data, isLoading, error } = useCompanies();
+  const refreshUniverse = useRefreshUniverse();
   const [search, setSearch] = useState("");
   const [area, setArea] = useState<"all" | Area>("all");
   const query = useDebounced(search.trim().toLowerCase(), 150);
@@ -105,7 +106,11 @@ export function Explore() {
             </option>
           ))}
         </select>
+        <button type="button" className="btn" onClick={() => refreshUniverse.mutate()} disabled={refreshUniverse.isPending}>
+          Aggiorna elenco S&P 500
+        </button>
       </div>
+      {refreshUniverse.error && <p role="alert">{(refreshUniverse.error as Error).message}</p>}
 
       {error && <p role="alert">Impossibile caricare le aziende: {(error as Error).message}</p>}
       {isLoading && <p className="muted">Caricamento…</p>}

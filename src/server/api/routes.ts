@@ -99,7 +99,29 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     return { a, b };
   });
 
-  app.get("/api/watchlist", async () => repos.watchlist.list());
+  // Each item carries its current score and the score recorded by its last snapshot, so the UI can show the change.
+  app.get("/api/watchlist", async () =>
+    repos.watchlist.list().map((item) => {
+      const snapshots = repos.snapshots.listForTicker(item.ticker);
+      const last = snapshots[snapshots.length - 1];
+      const scoreOf = (outcomes: { outcome: string }[]) => {
+        const pass = outcomes.filter((o) => o.outcome === "pass").length;
+        const evaluated = outcomes.filter((o) => o.outcome === "pass" || o.outcome === "fail").length;
+        return { pass, evaluated };
+      };
+      let currentScore: { pass: number; evaluated: number } | null = null;
+      try {
+        currentScore = buildAnalysis(item.ticker, { repos }).result.score;
+      } catch {
+        currentScore = null; // no longer in the index or no data: the card shows no current score
+      }
+      return {
+        ...item,
+        currentScore,
+        lastSnapshot: last ? { createdAt: last.createdAt, ...scoreOf(last.outcomes) } : null,
+      };
+    }),
+  );
 
   app.post("/api/watchlist", async (req, reply) => {
     const input = WatchlistInput.parse(req.body);

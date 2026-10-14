@@ -106,4 +106,22 @@ describe("local HTTP API", () => {
     expect(res.statusCode).toBe(200);
     expect(repos.companies.get("KO")?.inSp500).toBe(true);
   });
+
+  it("watchlist items show the current score and the score of the last snapshot", async () => {
+    seedKo(repos, { dividends: [] });
+    await app.inject({ method: "POST", url: "/api/watchlist", payload: { ticker: "KO" } });
+    repos.snapshots.save({
+      ticker: "KO",
+      criteriaVersion: "1.0.0",
+      metrics: [],
+      outcomes: [
+        { id: "roeAverage10y", area: "quality", outcome: "pass", metric: null },
+        { id: "debtYears", area: "quality", outcome: "fail", metric: null },
+      ],
+    });
+    const res = await app.inject({ method: "GET", url: "/api/watchlist" });
+    const ko = res.json().find((w: any) => w.ticker === "KO");
+    expect(ko.lastSnapshot).toMatchObject({ pass: 1, evaluated: 2 });
+    expect(ko.currentScore).toMatchObject({ evaluated: expect.any(Number) });
+  });
 });

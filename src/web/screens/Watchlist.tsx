@@ -54,6 +54,19 @@ export function Watchlist() {
   );
 }
 
+// Current score against the score of the last snapshot: the change is what a reviewer needs to see.
+function ScoreLine({ item }: { item: WatchlistItem }) {
+  if (!item.currentScore) return <p className="muted">Punteggio non disponibile</p>;
+  const now = `${item.currentScore.pass}/${item.currentScore.evaluated}`;
+  if (!item.lastSnapshot) return <p className="muted">Ora {now} · nessuno snapshot</p>;
+  const then = `${item.lastSnapshot.pass}/${item.lastSnapshot.evaluated}`;
+  return (
+    <p className="score-line">
+      Ora {now} <span className="muted">· Ultimo snapshot {then}</span>
+    </p>
+  );
+}
+
 function WatchCard({
   item,
   onRemove,
@@ -73,6 +86,7 @@ function WatchCard({
         </button>
       </header>
       <p className="muted">Aggiunto il {formatDate(item.addedAt)}</p>
+      <ScoreLine item={item} />
       <label className="field">
         <span>Note</span>
         <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import userEvent from "@testing-library/user-event";
 import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -50,7 +51,10 @@ beforeAll(() => {
 
 describe("Explore screen", () => {
   // Vitest does not auto-cleanup React Testing Library; unmount so debounce timers do not outlive the test.
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("search filters rows by ticker or name", async () => {
     renderWith([company("KO", "Coca-Cola", 5, 6), company("PG", "Procter & Gamble", 4, 6)]);
@@ -74,5 +78,20 @@ describe("Explore screen", () => {
     renderWith(many);
     expect(rowTickers().length).toBeGreaterThan(0);
     expect(rowTickers().length).toBeLessThan(60);
+  });
+
+  it("the update button asks the server to reload the S&P 500 list", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        const body = url.endsWith("/companies") ? [company("KO", "Coca-Cola", 5, 6)] : { count: 0 };
+        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    renderWith([company("KO", "Coca-Cola", 5, 6)]);
+    await userEvent.click(screen.getByRole("button", { name: "Aggiorna elenco S&P 500" }));
+    expect(calls).toContain("POST /api/universe/refresh");
   });
 });

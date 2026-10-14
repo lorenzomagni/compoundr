@@ -107,4 +107,19 @@ describe("Company detail screen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Salva snapshot" }));
     expect(await screen.findByText("Versione criteri 1.0.0")).toBeInTheDocument();
   });
+
+  it("the refresh button asks the server to update the company data", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (url.endsWith("/analysis")) return json(analysis(false));
+        return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "fresh" } });
+      }),
+    );
+    renderWith(analysis(false));
+    await userEvent.click(screen.getByRole("button", { name: "Aggiorna dati" }));
+    expect(calls).toContain("POST /api/companies/KO/refresh");
+  });
 });

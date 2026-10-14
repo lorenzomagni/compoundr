@@ -8,6 +8,8 @@ export interface WatchlistItem {
   tags: string[];
   notes: string;
   reviewAt: string | null;
+  currentScore: { pass: number; evaluated: number } | null;
+  lastSnapshot: { createdAt: string; pass: number; evaluated: number } | null;
 }
 
 // Every write is optimistic: the list changes at once, and is rolled back if the server refuses.
@@ -24,7 +26,7 @@ export function useAddWatchlist() {
       const previous = client.getQueryData<WatchlistItem[]>(queryKeys.watchlist) ?? [];
       client.setQueryData<WatchlistItem[]>(queryKeys.watchlist, [
         ...previous,
-        { ticker, addedAt: new Date().toISOString(), tags: [], notes: "", reviewAt: null },
+        { ticker, addedAt: new Date().toISOString(), tags: [], notes: "", reviewAt: null, currentScore: null, lastSnapshot: null },
       ]);
       return { previous };
     },

@@ -37,6 +37,26 @@ export function useSaveSnapshot(ticker: string) {
   });
 }
 
+export function useRefreshCompany(ticker: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ stale: boolean }>(`/companies/${encodeURIComponent(ticker)}/refresh`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.analysis(ticker) });
+    },
+  });
+}
+
+export function useRefreshUniverse() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ count: number }>("/universe/refresh"),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.companies });
+    },
+  });
+}
+
 export function useStatus() {
   return useQuery({ queryKey: queryKeys.status, queryFn: () => api.get<StatusResponse>("/status") });
 }

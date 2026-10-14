@@ -62,4 +62,16 @@ describe("fmp client", () => {
     const err = await client.sp500Constituents().catch((e: Error) => e);
     expect(String((err as Error).message)).not.toContain("SECRET-KEY-123");
   });
+
+  it("every retried attempt is counted against the daily quota", async () => {
+    let calls = 0;
+    const fetchFn = (async () => {
+      calls++;
+      return calls === 1 ? new Response("slow", { status: 429 }) : new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+    const client = createFmpClient({ apiKey: "k", cache: repos.cache, fetch: fetchFn, quotaPerDay: 10 });
+    await client.sp500Constituents();
+    expect(calls).toBe(2);
+    expect(client.quotaRemaining()).toBe(8);
+  });
 });

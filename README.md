@@ -38,6 +38,10 @@ npm run dev
 
 Avvia il server locale (http://127.0.0.1:3000) e l'interfaccia (http://127.0.0.1:5173). Entrambi sono legati al solo computer locale.
 
+## Primo utilizzo
+
+Al primo avvio l'elenco dei titoli è vuoto. Dalla schermata Esplora premi **Aggiorna elenco S&P 500**. Per ogni azienda, nel dettaglio premi **Aggiorna dati** per scaricare bilanci e, se configurata, quotazioni e dividendi.
+
 ## Verifica
 
 ```bash

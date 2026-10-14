@@ -56,4 +56,21 @@ describe("Watchlist screen", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/già in watchlist/);
     expect(screen.queryByRole("article", { name: "KO" })).toBeNull();
   });
+
+  it("a watchlist card shows the change of score since the last snapshot", async () => {
+    const item = {
+      ticker: "KO",
+      addedAt: "2026-10-01T00:00:00.000Z",
+      tags: [],
+      notes: "",
+      reviewAt: null,
+      currentScore: { pass: 2, evaluated: 2 },
+      lastSnapshot: { createdAt: "2026-10-05T00:00:00.000Z", pass: 1, evaluated: 2 },
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => json([item])));
+    renderPage();
+    const card = await screen.findByRole("article", { name: "KO" });
+    expect(card).toHaveTextContent("Ora 2/2");
+    expect(card).toHaveTextContent("Ultimo snapshot 1/2");
+  });
 });
