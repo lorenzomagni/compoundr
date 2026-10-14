@@ -1,0 +1,28 @@
+{
+  "name": "compoundr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Analisi locale di dividend stock con criteri value investing",
+  "type": "module",
+  "scripts": {
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev": "concurrently -n server,web \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "build": "tsc -p tsconfig.json --noEmit && vite build"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "fastify": "^5.12.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

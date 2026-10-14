@@ -1,0 +1,6 @@
+{
+  "fmpApiKey": "LA_TUA_CHIAVE_FMP",
+  "edgarUserAgent": "Compoundr tuo.nome@example.com",
+  "dbPath": "data/compoundr.db",
+  "port": 3000
+}
