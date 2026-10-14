@@ -155,3 +155,9 @@ td a:hover { color: var(--accent); }
 .compare-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .compare-table th, .compare-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; }
 .compare-table th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Setup notice and setup screen */
+.setup-notice { background: color-mix(in srgb, var(--missing) 12%, transparent); border-bottom: 1px solid var(--border); padding: 10px var(--gutter); font-size: 0.9rem; }
+.setup-notice a { color: var(--text); font-weight: 600; }
+.setup { max-width: 640px; line-height: 1.6; }
+.setup h2 { font-size: 1rem; margin: 24px 0 8px; }

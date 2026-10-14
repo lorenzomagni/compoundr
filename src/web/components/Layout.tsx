@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { useStatus } from "../api/hooks";
 
 const NAV = [
   { to: "/", label: "Esplora" },
@@ -7,6 +8,7 @@ const NAV = [
 ];
 
 export function Layout() {
+  const { data } = useStatus();
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -19,6 +21,11 @@ export function Layout() {
           ))}
         </nav>
       </header>
+      {data && !data.fmpKeyConfigured && (
+        <aside aria-label="Configurazione" className="setup-notice">
+          Chiave FMP non configurata: prezzi e dividendi non sono disponibili. <Link to="/setup">Come configurarla</Link>
+        </aside>
+      )}
       <main className="app-main">
         <Outlet />
       </main>
