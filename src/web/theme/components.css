@@ -1,0 +1,76 @@
+/* Shared component styles. Colours come only from the tokens in tokens.css. */
+h1 { font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 700; margin: 0 0 16px; letter-spacing: -0.01em; }
+
+.muted { color: var(--muted); }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.toolbar input,
+.toolbar select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  min-width: 220px;
+  transition: border-color var(--transition);
+}
+.toolbar input:focus-visible,
+.toolbar select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+.table-scroll {
+  height: min(640px, 70vh);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody td {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  vertical-align: middle;
+}
+
+tbody tr:hover td { background: var(--surface-raised); }
+
+td a { color: var(--text); font-weight: 600; text-decoration: none; }
+td a:hover { color: var(--accent); }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.chip-pass { color: var(--pass); background: color-mix(in srgb, var(--pass) 14%, transparent); }
+.chip-fail { color: var(--fail); background: color-mix(in srgb, var(--fail) 14%, transparent); }
+.chip-missing { color: var(--missing); background: color-mix(in srgb, var(--missing) 14%, transparent); }
+.chip-na { color: var(--muted); background: var(--surface-raised); border-color: var(--border); }
