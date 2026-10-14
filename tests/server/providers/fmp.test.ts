@@ -74,4 +74,10 @@ describe("fmp client", () => {
     expect(calls).toBe(2);
     expect(client.quotaRemaining()).toBe(8);
   });
+
+  it("a 402 from FMP explains that the plan does not include the endpoint", async () => {
+    const fetchFn = (async () => new Response("payment", { status: 402 })) as unknown as typeof fetch;
+    const client = createFmpClient({ apiKey: "k", cache: repos.cache, fetch: fetchFn });
+    await expect(client.sp500Constituents()).rejects.toThrow(/piano gratuito/i);
+  });
 });

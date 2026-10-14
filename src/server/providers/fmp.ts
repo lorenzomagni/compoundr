@@ -19,7 +19,11 @@ export class FmpQuotaExceeded extends Error {
 // Errors carry the status only, never the URL: the URL contains the key.
 class FmpHttpError extends Error {
   constructor(public status: number) {
-    super(`FMP ha risposto con stato ${status}`);
+    super(
+      status === 402
+        ? "FMP non include questo dato nel piano gratuito (risposta 402)"
+        : `FMP ha risposto con stato ${status}`,
+    );
   }
 }
 const isRetryable = (e: unknown) => e instanceof FmpHttpError && (e.status === 429 || e.status >= 500);
