@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // The suite seeds its own database (data/e2e.db) and runs the API on 3100 and the web app on 5173.
 export default defineConfig({
   testDir: "e2e",
-  use: { baseURL: "http://127.0.0.1:5173", trace: "retain-on-failure" },
+  use: { baseURL: "http://127.0.0.1:5174", trace: "retain-on-failure" },
   projects: [{ name: "desktop", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
@@ -14,8 +14,8 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "npx vite --port 5173 --strictPort",
-      url: "http://127.0.0.1:5173",
+      command: "npx vite --port 5174 --strictPort",
+      url: "http://127.0.0.1:5174",
       env: { COMPOUNDR_PORT: "3100" },
       reuseExistingServer: false,
       timeout: 60_000,
