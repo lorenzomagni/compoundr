@@ -23,16 +23,24 @@ function chipFor(m: Metric): { kind: ChipKind; label: string } {
 
 export function MetricCard({ metric }: { metric: Metric }) {
   const chip = chipFor(metric);
+  const threshold = metric.catalog.threshold;
   return (
-    <article className="metric-card">
+    <article className={`card metric-card metric-${chip.kind}`}>
       <header className="metric-head">
         <h3>{metric.catalog.label}</h3>
         <StatusChip kind={chip.kind}>{chip.label}</StatusChip>
       </header>
-      <p className="metric-value">{formatMetric(metric.id, metric.value)}</p>
+      <div className="metric-value-row">
+        <p className="metric-value">{formatMetric(metric.id, metric.value)}</p>
+        {threshold && (
+          <p className="metric-threshold muted">
+            soglia {threshold.op === "gte" ? "≥" : "≤"} {formatMetric(metric.id, threshold.value)}
+          </p>
+        )}
+      </div>
       <dl className="metric-meta">
         <dt>Formula</dt>
-        <dd>{metric.catalog.formula}</dd>
+        <dd className="metric-formula">{metric.catalog.formula}</dd>
         <dt>Perché conta</dt>
         <dd>{metric.catalog.whyItMatters}</dd>
         <dt>Fonte</dt>

@@ -4,6 +4,9 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCompanies, useRefreshUniverse, type CompanySummary } from "../api/hooks";
 import { ScoreBadge } from "../components/ScoreBadge";
+import { PageHeader } from "../components/PageHeader";
+import { EmptyState, Skeleton } from "../components/EmptyState";
+import { Icon } from "../components/Icon";
 
 type Area = "quality" | "earnings" | "dividend" | "valuation";
 const AREA_LABEL: Record<Area, string> = {
@@ -35,10 +38,18 @@ const columnHelper = createColumnHelper<CompanySummary>();
 const columns = [
   columnHelper.accessor("ticker", {
     header: "Ticker",
-    cell: (info) => <Link to={`/companies/${info.getValue()}`}>{info.getValue()}</Link>,
+    cell: (info) => (
+      <Link to={`/companies/${info.getValue()}`} className="ticker-link">
+        {info.getValue()}
+      </Link>
+    ),
   }),
   columnHelper.accessor("name", { header: "Nome" }),
-  columnHelper.accessor((c) => c.sector ?? "—", { id: "sector", header: "Settore" }),
+  columnHelper.accessor((c) => c.sector, {
+    id: "sector",
+    header: "Settore",
+    cell: (info) => (info.getValue() ? <span className="sector-tag">{info.getValue()}</span> : <span className="muted">—</span>),
+  }),
   columnHelper.display({
     id: "score",
     header: "Punteggio",
@@ -83,72 +94,123 @@ export function Explore() {
   const virtualizer = useVirtualizer({
     count: tableRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 56,
+    estimateSize: () => 60,
     overscan: 8,
   });
 
+  const total = data?.length ?? 0;
+  const filtered = rows.length !== total;
+
   return (
-    <section aria-labelledby="explore-title">
-      <h1 id="explore-title">Esplora S&amp;P 500</h1>
+    <section aria-labelledby="explore-title" className="screen">
+      <PageHeader
+        id="explore-title"
+        eyebrow="Universo"
+        title="Esplora S&P 500"
+        description="Ogni azienda è valutata sui criteri di qualità, utili, dividendo e valutazione. Le migliori sono in cima."
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={() => refreshUniverse.mutate()} disabled={refreshUniverse.isPending}>
+            <Icon name="refresh" size={16} className={refreshUniverse.isPending ? "spin" : undefined} />
+            Aggiorna elenco S&P 500
+          </button>
+        }
+      />
+
       <div className="toolbar">
-        <input
-          type="search"
-          aria-label="Cerca ticker o nome"
-          placeholder="Cerca ticker o nome"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select aria-label="Filtra per area" value={area} onChange={(e) => setArea(e.target.value as "all" | Area)}>
-          <option value="all">Tutte le aree</option>
+        <label className="input-wrap">
+          <Icon name="search" size={16} className="input-icon" />
+          <input
+            type="search"
+            aria-label="Cerca ticker o nome"
+            placeholder="Cerca ticker o nome"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <div className="segmented" role="group" aria-label="Filtra per area">
+          <button type="button" className="segment" aria-pressed={area === "all"} onClick={() => setArea("all")}>
+            Tutte
+          </button>
           {(Object.keys(AREA_LABEL) as Area[]).map((a) => (
-            <option key={a} value={a}>
-              Solo: {AREA_LABEL[a]} superate
-            </option>
+            <button key={a} type="button" className="segment" aria-pressed={area === a} onClick={() => setArea(a)} title={`Solo aziende che superano tutti i criteri di ${AREA_LABEL[a].toLowerCase()}`}>
+              {AREA_LABEL[a]}
+            </button>
           ))}
-        </select>
-        <button type="button" className="btn" onClick={() => refreshUniverse.mutate()} disabled={refreshUniverse.isPending}>
-          Aggiorna elenco S&P 500
-        </button>
+        </div>
+        {data && (
+          <p className="result-count muted">
+            {filtered ? `${rows.length} di ${total}` : total} {total === 1 ? "azienda" : "aziende"}
+          </p>
+        )}
       </div>
-      {refreshUniverse.error && <p role="alert">{(refreshUniverse.error as Error).message}</p>}
+
+      {refreshUniverse.error && (
+        <p role="alert" className="notice notice-error">
+          <Icon name="alert" size={16} />
+          {(refreshUniverse.error as Error).message}
+        </p>
+      )}
       {refreshUniverse.data && (
-        <p role="status" className="muted">
-          Elenco aggiornato: {refreshUniverse.data.count} titoli, fonte {refreshUniverse.data.source === "wikipedia" ? "Wikipedia (online)" : `copia del progetto del ${refreshUniverse.data.asOf}`}.
+        <p role="status" className="notice notice-ok">
+          <Icon name="check" size={16} />
+          Elenco aggiornato: {refreshUniverse.data.count} titoli, fonte{" "}
+          {refreshUniverse.data.source === "wikipedia" ? "Wikipedia (online)" : `copia del progetto del ${refreshUniverse.data.asOf}`}.
         </p>
       )}
 
-      {error && <p role="alert">Impossibile caricare le aziende: {(error as Error).message}</p>}
-      {isLoading && <p className="muted">Caricamento…</p>}
+      {error && (
+        <p role="alert" className="notice notice-error">
+          <Icon name="alert" size={16} />
+          Impossibile caricare le aziende: {(error as Error).message}
+        </p>
+      )}
+      {isLoading && (
+        <div className="card">
+          <Skeleton lines={6} label="Caricamento…" />
+        </div>
+      )}
 
       {data && (
-        <div ref={scrollRef} className="table-scroll">
-          <table>
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {hg.headers.map((h) => (
-                    <th key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-              {virtualizer.getVirtualItems().map((vi) => {
-                const row = tableRows[vi.index]!;
-                return (
-                  <tr
-                    key={row.id}
-                    style={{ position: "absolute", transform: `translateY(${vi.start}px)`, width: "100%", display: "table" }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+        <div className="card table-card">
+          <div ref={scrollRef} className="table-scroll">
+            <table className="data-table">
+              <thead>
+                {table.getHeaderGroups().map((hg) => (
+                  <tr key={hg.id}>
+                    {hg.headers.map((h) => (
+                      <th key={h.id} data-col={h.column.id}>
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </th>
                     ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {rows.length === 0 && <p className="muted">Nessuna azienda corrisponde ai filtri.</p>}
+                ))}
+              </thead>
+              <tbody style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+                {virtualizer.getVirtualItems().map((vi) => {
+                  const row = tableRows[vi.index]!;
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{ position: "absolute", transform: `translateY(${vi.start}px)`, width: "100%", display: "table" }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} data-col={cell.column.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {rows.length === 0 && (
+              <EmptyState
+                icon="search"
+                title="Nessuna azienda corrisponde ai filtri."
+                hint={total === 0 ? "Aggiorna l'elenco S&P 500 per popolare l'universo." : "Prova a modificare la ricerca o a scegliere un'altra area."}
+              />
+            )}
+          </div>
         </div>
       )}
     </section>
