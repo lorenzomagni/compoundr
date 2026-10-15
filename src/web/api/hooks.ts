@@ -88,6 +88,14 @@ export interface AnalysisResponse {
     criteria: { id: string; area: string; outcome: string }[];
     score: CompanySummary["score"];
   };
+  verdict: {
+    verdict: string;
+    overall: number | null;
+    evaluableShare: number;
+    redFlags: { id: string; label: string }[];
+    themes: { area: string; pass: number; evaluated: number; percent: number | null }[];
+  };
+  narrative: { themes: { area: string; paragraph: string; ruleIds: string[] }[]; synthesis: string };
   summary: { price: number | null; dividendYield: number | null };
   history: { year: number; netIncome: number | null; roe: number | null; operatingMargin: number | null; dividendPerShare: number | null }[];
   freshness: { edgar: { fetchedAt: string; expired: boolean } | null; fmp: { fetchedAt: string; expired: boolean } | null };

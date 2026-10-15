@@ -698,3 +698,13 @@ code {
   [data-col="name"] { width: 44%; }
   [data-col="score"] { width: 32%; }
 }
+
+/* Analysis tab */
+.analysis-panel { display: grid; gap: var(--space-4, 1rem); }
+.analysis-verdict-head { display: flex; align-items: center; gap: 1rem; }
+.analysis-overall { font-size: 1.75rem; font-weight: 700; }
+.analysis-flags { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.analysis-flags li { display: flex; align-items: center; gap: 0.5rem; }
+.analysis-themes { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.analysis-theme-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.analysis-theme-head h3 { margin: 0; font-size: 1rem; }

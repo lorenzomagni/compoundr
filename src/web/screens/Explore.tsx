@@ -8,10 +8,10 @@ import { PageHeader } from "../components/PageHeader";
 import { EmptyState, Skeleton } from "../components/EmptyState";
 import { Icon } from "../components/Icon";
 
-type Area = "quality" | "earnings" | "dividend" | "valuation";
+type Area = "quality" | "solidity" | "dividend" | "valuation";
 const AREA_LABEL: Record<Area, string> = {
   quality: "Qualità",
-  earnings: "Utili",
+  solidity: "Solidità",
   dividend: "Dividendo",
   valuation: "Valutazione",
 };
@@ -55,7 +55,7 @@ const columns = [
     header: "Punteggio",
     cell: (info) => <ScoreBadge pass={info.row.original.score.pass} evaluated={info.row.original.score.evaluated} />,
   }),
-  ...(["quality", "dividend", "valuation"] as Area[]).map((area) =>
+  ...(["quality", "solidity", "dividend", "valuation"] as Area[]).map((area) =>
     columnHelper.display({
       id: area,
       header: AREA_LABEL[area],

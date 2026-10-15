@@ -6,6 +6,7 @@ import { MetricCard } from "../components/MetricCard";
 import { StaleBanner } from "../components/StaleBanner";
 import { StatusChip } from "../components/StatusChip";
 import { formatDate, formatPercent } from "../format";
+import { AnalysisPanel } from "../components/AnalysisPanel";
 import { CriteriaChecklist } from "../components/CriteriaChecklist";
 import { HistoryChart } from "../components/HistoryChart";
 import { Icon } from "../components/Icon";
@@ -105,8 +106,12 @@ export function CompanyDetail() {
 
       <StaleBanner freshness={data.freshness} />
 
-      <Tabs.Root defaultValue="panoramica" className="tabs">
+      <Tabs.Root defaultValue="analisi" className="tabs">
         <Tabs.List className="tabs-list" aria-label="Sezioni">
+          <Tabs.Trigger value="analisi" className="tab">
+            <Icon name="sparkle" size={15} />
+            Analisi
+          </Tabs.Trigger>
           <Tabs.Trigger value="panoramica" className="tab">
             <Icon name="check" size={15} />
             Panoramica
@@ -120,6 +125,10 @@ export function CompanyDetail() {
             Storico
           </Tabs.Trigger>
         </Tabs.List>
+
+        <Tabs.Content value="analisi" className="tab-panel">
+          <AnalysisPanel analysis={data} />
+        </Tabs.Content>
 
         <Tabs.Content value="panoramica" className="tab-panel">
           <CriteriaChecklist analysis={data} />

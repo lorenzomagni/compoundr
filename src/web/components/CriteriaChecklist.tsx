@@ -15,11 +15,11 @@ const OUTCOME: Record<string, { kind: ChipKind; label: string }> = {
 
 const AREA: Record<string, { label: string; icon: IconName; hint: string }> = {
   quality: { label: "Qualità del business", icon: "shield", hint: "Rendimento sul capitale, margini, debito" },
-  earnings: { label: "Qualità degli utili", icon: "coins", hint: "Quanto dell'utile diventa cassa" },
-  dividend: { label: "Dividendo", icon: "sparkle", hint: "Sostenibilità e continuità della cedola" },
+  solidity: { label: "Solidità finanziaria", icon: "coins", hint: "Debito, liquidità e conversione dell'utile in cassa" },
+  dividend: { label: "Sostenibilità del dividendo", icon: "sparkle", hint: "Sostenibilità e continuità della cedola" },
   valuation: { label: "Valutazione", icon: "scale", hint: "Prezzo rispetto a utili e cassa" },
 };
-const AREA_ORDER = ["quality", "earnings", "dividend", "valuation"];
+const AREA_ORDER = ["quality", "solidity", "dividend", "valuation"];
 
 // The overview: criteria grouped by area, each with its threshold, the value found and its outcome.
 export function CriteriaChecklist({ analysis }: { analysis: Analysis }) {

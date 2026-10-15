@@ -32,6 +32,8 @@ const analysis = (fmpExpired: boolean): AnalysisResponse => ({
     ],
     score: { pass: 1, evaluated: 1, byArea: { quality: { pass: 1, evaluated: 1 } } },
   },
+  verdict: { verdict: "Da approfondire", overall: 0.5, evaluableShare: 1, redFlags: [], themes: [] },
+  narrative: { themes: [], synthesis: "Esito: Da approfondire." },
   summary: { price: 62, dividendYield: 0.0079 },
   history: [],
   freshness: {
