@@ -1,4 +1,5 @@
 import { formatDate } from "../format";
+import { Icon } from "./Icon";
 
 interface Freshness {
   fetchedAt: string;
@@ -11,8 +12,11 @@ export function StaleBanner({ freshness }: { freshness: { edgar: Freshness | nul
   if (expired.length === 0) return null;
   const oldest = expired.map((f) => f.fetchedAt).sort()[0]!;
   return (
-    <div role="status" className="stale-banner">
-      Dati aggiornati al {formatDate(oldest)}. Aggiornamento non disponibile: mostro i valori in cache.
+    <div role="status" className="notice notice-warn">
+      <Icon name="clock" size={16} />
+      <span>
+        Dati aggiornati al <strong>{formatDate(oldest)}</strong>. Aggiornamento non disponibile: mostro i valori in cache.
+      </span>
     </div>
   );
 }

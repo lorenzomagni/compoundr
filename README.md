@@ -1,64 +1,66 @@
 # compoundr
 
-Compoundr è uno strumento locale per analizzare le aziende dell'S&P 500 che distribuiscono dividendi, con criteri di value investing ispirati a Warren Buffett. Nella v1 serve a ricercare, confrontare e ricordare le analisi nel tempo. Non fornisce raccomandazioni di acquisto e non gestisce ancora portfolio.
+Compoundr is a local tool for analysing S&P 500 companies that pay dividends, using value-investing criteria inspired by Warren Buffett. In v1 it helps you research, compare and remember analyses over time. It does not give buy recommendations and does not track portfolios yet.
 
-## Requisiti
+> Italian version: [README.it.md](README.it.md)
+
+## Requirements
 
 - Node.js LTS
-- Un User-Agent con contatto per SEC EDGAR (obbligatorio)
-- Una chiave gratuita di [Financial Modeling Prep](https://site.financialmodelingprep.com/) (facoltativa: senza di essa prezzi e dividendi non sono disponibili)
+- A User-Agent with contact details for SEC EDGAR (required)
+- A free [Financial Modeling Prep](https://site.financialmodelingprep.com/) API key (optional: without it, prices and dividends are not available)
 
-## Installazione
+## Installation
 
 ```bash
 npm install
 ```
 
-## Configurazione
+## Configuration
 
-Crea il file di configurazione locale partendo dal modello:
+Create your local configuration file from the template:
 
 ```bash
 cp config/local.example.json config/local.json
 ```
 
-Poi compila i campi:
+Then fill in the fields:
 
-- `fmpApiKey`: la tua chiave FMP, oppure `null`.
-- `edgarUserAgent`: un identificativo con un contatto, per esempio `Compoundr tuo.nome@example.com`. La SEC lo richiede.
-- `dbPath` e `port`: di norma puoi lasciarli invariati.
+- `fmpApiKey`: your FMP key, or `null`.
+- `edgarUserAgent`: an identifier with a contact, for example `Compoundr you@example.com`. The SEC requires it.
+- `dbPath` and `port`: you can usually leave them as they are.
 
-`config/local.json` è escluso da git: la chiave non viene mai committata né inviata al browser.
+`config/local.json` is git-ignored: the key is never committed or sent to the browser.
 
-## Avvio
+## Running
 
 ```bash
 npm run dev
 ```
 
-Avvia il server locale (http://127.0.0.1:3000) e l'interfaccia (http://127.0.0.1:5173). Entrambi sono legati al solo computer locale.
+This starts the local server (http://127.0.0.1:3000) and the interface (http://127.0.0.1:5173). Both listen on the local machine only.
 
-## Primo utilizzo
+## First use
 
-Al primo avvio l'elenco dei titoli è vuoto. Dalla schermata Esplora premi **Aggiorna elenco S&P 500**: l'app legge la lista dei 503 titoli dalla pagina Wikipedia dell'indice. Se la pagina non risponde, usa la copia inclusa nel progetto (`src/server/data/sp500-snapshot.json`), e l'interfaccia lo segnala. Per ogni azienda, nel dettaglio premi **Aggiorna dati** per scaricare bilanci e, se configurata, quotazioni e dividendi.
+On first launch the list of companies is empty. On the Explore screen press **Aggiorna elenco S&P 500** (*Refresh S&P 500 list*): the app reads the 503 names from the index's Wikipedia page. If that page is unreachable, it uses the copy bundled in the project (`src/server/data/sp500-snapshot.json`), and the interface tells you which source was used. For each company, press **Aggiorna dati** (*Refresh data*) on its detail page to download filings and, if a key is configured, prices and dividends.
 
-## Verifica
+## Testing
 
 ```bash
-npm test      # test unitari e di integrazione
-npm run build # controllo dei tipi e build dell'interfaccia
-npm run e2e   # test end-to-end con Playwright (richiede i browser di Playwright)
+npm test      # unit and integration tests
+npm run build # type check and interface build
+npm run e2e   # end-to-end tests with Playwright (needs the Playwright browsers)
 ```
 
-## Struttura
+## Project layout
 
-- `src/shared`: catalogo delle metriche e tipi condivisi.
-- `src/server`: formule, motore dei criteri, cache, adattatori SEC EDGAR e FMP, API locale, archivio SQLite.
-- `src/web`: interfaccia React.
-- `docs/superpowers`: specifica e piano di implementazione della v1.
+- `src/shared`: metric catalogue and shared types.
+- `src/server`: formulas, criteria engine, cache, SEC EDGAR and FMP adapters, local API, SQLite storage.
+- `src/web`: React interface.
+- `docs/superpowers`: v1 specification and implementation plan.
 
 ## Roadmap
 
-- **v1.x:** aggiornamenti programmati in background e promemoria di rianalisi.
-- **v2:** estensione dell'universo oltre l'S&P 500, valutazione del DCF come opzione.
-- **v3:** tracking dei portfolio, con simulazione della crescita composta.
+- **v1.x:** scheduled background updates and re-analysis reminders.
+- **v2:** universe beyond the S&P 500; DCF valuation as an option.
+- **v3:** portfolio tracking, with compound-growth simulation.

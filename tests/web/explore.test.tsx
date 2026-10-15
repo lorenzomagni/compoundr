@@ -17,7 +17,7 @@ const company = (ticker: string, name: string, pass: number, evaluated: number):
     evaluated,
     byArea: {
       quality: { pass: Math.min(pass, 2), evaluated: Math.min(evaluated, 2) },
-      earnings: { pass: 0, evaluated: 0 },
+      solidity: { pass: 0, evaluated: 0 },
       dividend: { pass: 0, evaluated: 0 },
       valuation: { pass: 0, evaluated: 0 },
     },

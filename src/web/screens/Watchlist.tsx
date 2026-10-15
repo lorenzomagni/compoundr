@@ -2,6 +2,10 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAddWatchlist, useRemoveWatchlist, useUpdateNotes, useWatchlist, type WatchlistItem } from "../api/watchlist";
 import { formatDate } from "../format";
+import { PageHeader } from "../components/PageHeader";
+import { EmptyState, Skeleton } from "../components/EmptyState";
+import { Icon } from "../components/Icon";
+import { ScoreBadge } from "../components/ScoreBadge";
 
 export function Watchlist() {
   const { data = [], isLoading, error } = useWatchlist();
@@ -18,27 +22,62 @@ export function Watchlist() {
     setTicker("");
   }
 
+  const firstError = add.error ?? remove.error ?? updateNotes.error ?? error;
+
   return (
-    <section aria-labelledby="watchlist-title">
-      <h1 id="watchlist-title">Watchlist</h1>
+    <section aria-labelledby="watchlist-title" className="screen">
+      <PageHeader
+        id="watchlist-title"
+        eyebrow="Seguite"
+        title="Watchlist"
+        description="Le aziende che tieni d'occhio, con il punteggio di oggi rispetto all'ultimo snapshot e le tue note."
+      />
       <form className="toolbar" onSubmit={onAdd}>
-        <input
-          type="text"
-          aria-label="Ticker da aggiungere"
-          placeholder="Es. KO"
-          value={ticker}
-          onChange={(e) => setTicker(e.target.value)}
-        />
+        <label className="input-wrap input-ticker">
+          <Icon name="plus" size={16} className="input-icon" />
+          <input
+            type="text"
+            aria-label="Ticker da aggiungere"
+            placeholder="Es. KO"
+            autoComplete="off"
+            autoCapitalize="characters"
+            value={ticker}
+            onChange={(e) => setTicker(e.target.value)}
+          />
+        </label>
         <button type="submit" className="btn">
           Aggiungi
         </button>
       </form>
 
-      {(add.error || remove.error || updateNotes.error || error) && (
-        <p role="alert">{((add.error ?? remove.error ?? updateNotes.error ?? error) as Error).message}</p>
+      {firstError && (
+        <p role="alert" className="notice notice-error">
+          <Icon name="alert" size={16} />
+          {(firstError as Error).message}
+        </p>
       )}
-      {isLoading && <p className="muted">Caricamento…</p>}
-      {!isLoading && data.length === 0 && <p className="muted">Nessuna azienda in watchlist.</p>}
+      {isLoading && (
+        <div className="watch-grid" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card">
+              <Skeleton lines={4} label="" />
+            </div>
+          ))}
+        </div>
+      )}
+      {isLoading && <span className="sr-only">Caricamento…</span>}
+      {!isLoading && data.length === 0 && (
+        <EmptyState
+          icon="bookmark"
+          title="Nessuna azienda in watchlist."
+          hint="Aggiungi un ticker qui sopra oppure apri un'azienda da Esplora."
+          action={
+            <Link to="/" className="btn btn-secondary">
+              <Icon name="compass" size={16} /> Vai a Esplora
+            </Link>
+          }
+        />
+      )}
 
       <div className="watch-grid">
         {data.map((item) => (
@@ -56,14 +95,34 @@ export function Watchlist() {
 
 // Current score against the score of the last snapshot: the change is what a reviewer needs to see.
 function ScoreLine({ item }: { item: WatchlistItem }) {
-  if (!item.currentScore) return <p className="muted">Punteggio non disponibile</p>;
-  const now = `${item.currentScore.pass}/${item.currentScore.evaluated}`;
-  if (!item.lastSnapshot) return <p className="muted">Ora {now} · nessuno snapshot</p>;
+  if (!item.currentScore) return <p className="muted score-line">Punteggio non disponibile</p>;
+  if (!item.lastSnapshot) {
+    return (
+      <div className="score-line">
+        <span className="score-now">
+          Ora <ScoreBadge pass={item.currentScore.pass} evaluated={item.currentScore.evaluated} />
+        </span>
+        <span className="muted">· nessuno snapshot</span>
+      </div>
+    );
+  }
   const then = `${item.lastSnapshot.pass}/${item.lastSnapshot.evaluated}`;
+  const delta = item.currentScore.pass - item.lastSnapshot.pass;
+  const trend = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
   return (
-    <p className="score-line">
-      Ora {now} <span className="muted">· Ultimo snapshot {then}</span>
-    </p>
+    <div className="score-line">
+      <span className="score-now">
+        Ora <ScoreBadge pass={item.currentScore.pass} evaluated={item.currentScore.evaluated} />
+      </span>
+      <span className="muted">· Ultimo snapshot {then}</span>
+      {trend !== "flat" && (
+        <span className={`delta delta-${trend}`}>
+          <Icon name={trend === "up" ? "arrowUp" : "arrowDown"} size={12} strokeWidth={2.5} />
+          {Math.abs(delta)}
+          <span className="sr-only"> {delta > 0 ? "in più" : "in meno"} rispetto all'ultimo snapshot</span>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -77,23 +136,30 @@ function WatchCard({
   onSaveNotes: (notes: string) => void;
 }) {
   const [notes, setNotes] = useState(item.notes);
+  const dirty = notes !== item.notes;
   return (
-    <article aria-label={item.ticker} className="watch-card">
+    <article aria-label={item.ticker} className="card watch-card">
       <header className="watch-head">
-        <Link to={`/companies/${item.ticker}`}>{item.ticker}</Link>
-        <button type="button" className="link-btn" onClick={onRemove}>
-          Rimuovi
+        <div>
+          <Link to={`/companies/${item.ticker}`} className="ticker-link watch-ticker">
+            {item.ticker}
+          </Link>
+          <p className="muted watch-added">Aggiunto il {formatDate(item.addedAt)}</p>
+        </div>
+        <button type="button" className="icon-btn icon-btn-danger" onClick={onRemove} aria-label={`Rimuovi ${item.ticker} dalla watchlist`} title="Rimuovi">
+          <Icon name="trash" size={16} />
         </button>
       </header>
-      <p className="muted">Aggiunto il {formatDate(item.addedAt)}</p>
       <ScoreLine item={item} />
       <label className="field">
         <span>Note</span>
-        <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <textarea rows={3} value={notes} placeholder="Perché la segui, cosa aspetti…" onChange={(e) => setNotes(e.target.value)} />
       </label>
-      <button type="button" className="btn" onClick={() => onSaveNotes(notes)} disabled={notes === item.notes}>
-        Salva nota
-      </button>
+      <div className="watch-actions">
+        <button type="button" className={`btn ${dirty ? "" : "btn-ghost"}`} onClick={() => onSaveNotes(notes)} disabled={!dirty}>
+          Salva nota
+        </button>
+      </div>
     </article>
   );
 }

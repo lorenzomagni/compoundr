@@ -32,6 +32,8 @@ const analysis = (fmpExpired: boolean): AnalysisResponse => ({
     ],
     score: { pass: 1, evaluated: 1, byArea: { quality: { pass: 1, evaluated: 1 } } },
   },
+  verdict: { verdict: "Da approfondire", overall: 0.5, evaluableShare: 1, redFlags: [], themes: [] },
+  narrative: { themes: [], synthesis: "Esito: Da approfondire." },
   summary: { price: 62, dividendYield: 0.0079 },
   history: [],
   freshness: {
@@ -137,4 +139,14 @@ describe("Company detail screen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Aggiorna dati" }));
     expect(await screen.findByText(/prezzi e dividendi non disponibili/i)).toBeInTheDocument();
   });
+
+describe("Company detail header", () => {
+  it("shows yield and price with a decimal comma", () => {
+    const data = analysis(false);
+    data.summary = { price: 62, dividendYield: 0.0312 };
+    renderWith(data);
+    expect(screen.getByText("3,12%")).toBeInTheDocument();
+    expect(screen.getByText("62,00")).toBeInTheDocument();
+  });
+});
 });
