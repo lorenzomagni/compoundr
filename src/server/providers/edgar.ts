@@ -114,13 +114,15 @@ export function createEdgarClient({ userAgent, fetch: fetchFn = fetch, perSecond
       // A 10-K also reports prior-year comparatives under its own fiscal year, so keep only the period
       // each filing is about: the latest period end within that accession. The fiscal year is the year of that end.
       const byKey = new Map<string, EdgarFundamental>();
-      const sources: Array<[string, z.infer<typeof Concept> | undefined, boolean]> = [
-        ...PINNED_CONCEPTS.map((c) => [c, usGaap[c], false] as [string, z.infer<typeof Concept> | undefined, boolean]),
+      type Source = { concept: string; entry: z.infer<typeof Concept> | undefined; useFilingFy: boolean };
+      const sources: Source[] = [
+        ...PINNED_CONCEPTS.map((c): Source => ({ concept: c, entry: usGaap[c], useFilingFy: false })),
         // Shares outstanding lives in the dei namespace. Its date is the cover-page date, after the fiscal year end,
-        // so the filing's own fiscal year is used instead of the year of that date.
-        [DEI_SHARES_CONCEPT, dei[DEI_SHARES_CONCEPT], true],
+        // so the year comes from fy; a fact without fy is skipped, never guessed from the date.
+        // dei year comes from fy; off-calendar filers may differ from the us-gaap end-year rule.
+        { concept: DEI_SHARES_CONCEPT, entry: dei[DEI_SHARES_CONCEPT], useFilingFy: true },
       ];
-      for (const [concept, entry, useFilingFy] of sources) {
+      for (const { concept, entry, useFilingFy } of sources) {
         if (!entry) continue;
         const annual = Object.values(entry.units)
           .flat()
@@ -132,7 +134,8 @@ export function createEdgarClient({ userAgent, fetch: fetchFn = fetch, perSecond
         }
         for (const f of annual) {
           if (f.end !== latestEndByFiling.get(f.accn)) continue;
-          const fiscalYear = useFilingFy && f.fy ? f.fy : Number(f.end.slice(0, 4));
+          if (useFilingFy && !f.fy) continue;
+          const fiscalYear = useFilingFy ? (f.fy as number) : Number(f.end.slice(0, 4));
           const key = `${fiscalYear}|${concept}`;
           const prev = byKey.get(key);
           if (!prev || f.filed > prev.filedAt) {
