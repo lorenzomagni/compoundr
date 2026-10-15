@@ -87,4 +87,10 @@ describe("payoutFcf", () => {
     expect(payoutFcf(null, 100).status).toBe("missing");
     expect(payoutFcf(50, null).status).toBe("missing");
   });
+
+describe("payoutFcf for a non-payer", () => {
+  it("zero dividends paid is not_applicable with a reason", () => {
+    expect(payoutFcf(0, 100)).toMatchObject({ status: "not_applicable", reason: "Nessun dividendo distribuito" });
+  });
+});
 });

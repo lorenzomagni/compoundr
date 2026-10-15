@@ -1,7 +1,7 @@
 import type { Area } from "../../shared/types";
 import { fmtPercent, fmtRatio, fmtYears } from "./paragraphs";
 
-export interface Facts { [metricId: string]: { value: number | null; status: string } }
+export interface Facts { [metricId: string]: { value: number | null; status: string; reason?: string } }
 export interface Rule { id: string; theme: Area; version: string; when(f: Facts): boolean; text(f: Facts): string }
 
 /** Value of a metric, or null when it is absent, not "ok" or not finite. Rules never fire on such inputs. */
@@ -49,7 +49,8 @@ export const RULES: Rule[] = [
     (f) => { const cuts = v(f, "dividendCutCount10y"); return cuts !== null && cuts > 0; },
     (f) => {
       const cuts = n(f, "dividendCutCount10y");
-      return `Il dividendo è stato tagliato ${cuts} ${cuts === 1 ? "volta" : "volte"} negli ultimi 10 anni: non è una rendita stabile. Un dividendo straordinario può essere incluso in uno degli anni.`;
+      const note = f["dividendCutCount10y"]?.reason ? " Un dividendo straordinario può essere incluso in uno degli anni." : "";
+      return `Il dividendo è stato tagliato ${cuts} ${cuts === 1 ? "volta" : "volte"} negli ultimi 10 anni: non è una rendita stabile.${note}`;
     }),
   rule("dividend.thinCoverage", "dividend",
     (f) => { const cov = v(f, "fcfCoverageMin5y"); return cov !== null && cov < 1.2; },

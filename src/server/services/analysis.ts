@@ -10,7 +10,7 @@ import { interestCoverage, currentRatio, netDebtToEbitda, altmanZ } from "../met
 import { fcfConversion, ownerEarnings } from "../metrics/earnings";
 import { payoutRatio, dividendStreakYears, dividendCagr, fcfCoverageMin5y, dividendCutCount10y, payoutFcf } from "../metrics/dividend";
 import { peVsAverage, pFcf } from "../metrics/valuation";
-import { insufficient, mean, notApplicable, MIN_YEARS } from "../metrics/common";
+import { insufficient, mean, MIN_YEARS } from "../metrics/common";
 
 export interface FinancialYear {
   fiscalYear: number;
@@ -194,8 +194,6 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
   let payoutFcfMetric: Metric;
   if (latest?.dividendsPaid != null) {
     payoutFcfMetric = payoutFcf(latest.dividendsPaid, latest.fcf);
-  } else if (latestDividend === 0) {
-    payoutFcfMetric = notApplicable("payoutFcf", "Nessun dividendo distribuito");
   } else {
     payoutFcfMetric = payoutFcf(approxDividends, latest?.fcf ?? null);
     if (payoutFcfMetric.status === "ok") {
@@ -236,10 +234,10 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
     ),
     epsCagr10y(years.slice(-11).map((y) => ({ year: y.fiscalYear, eps: epsOf(y) }))),
     fcfCoverageMin5y(
-      years.map((y) => ({
+      years.map((y, i) => ({
         year: y.fiscalYear,
         fcfPerShare: y.fcf !== null && y.shares ? y.fcf / y.shares : null,
-        dividendPerShare: y.dividendPerShare,
+        dividendPerShare: series[i]!.amount,
       })),
     ),
     dividendCutCount10y(series),

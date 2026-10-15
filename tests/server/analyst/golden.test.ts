@@ -51,7 +51,7 @@ describe("golden narratives", () => {
         { area: "solidity", ruleIds: ["solidity.serviceableDebt", "solidity.grey"],
           paragraph: "Il debito è ben sostenuto: copertura degli interessi di 6,00 e debito netto pari a 2,0 anni di EBITDA. Lo Z-score di Altman è 2,50, in zona grigia: nessun segnale immediato di dissesto, ma il margine di sicurezza è limitato." },
         { area: "dividend", ruleIds: ["dividend.cut", "dividend.thinCoverage"],
-          paragraph: "Il dividendo è stato tagliato 2 volte negli ultimi 10 anni: non è una rendita stabile. Un dividendo straordinario può essere incluso in uno degli anni. Nel peggiore degli ultimi 5 anni il flusso di cassa copre il dividendo solo 1,10 volte." },
+          paragraph: "Il dividendo è stato tagliato 2 volte negli ultimi 10 anni: non è una rendita stabile. Nel peggiore degli ultimi 5 anni il flusso di cassa copre il dividendo solo 1,10 volte." },
         { area: "valuation", ruleIds: ["valuation.premium"],
           paragraph: "Il titolo costa 1,20 volte il proprio P/E medio storico: il prezzo incorpora già aspettative elevate." },
       ],

@@ -152,4 +152,36 @@ describe("buildAnalysis", () => {
     const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
     expect(m.value).toBeCloseTo(3000 / 9000, 6);
   });
+
+  it("payoutFcf is not_applicable when dividends paid is zero (non-payer)", () => {
+    seedKo(repos, { dividends: [] });
+    repos.fundamentals.upsertMany([
+      { ticker: "KO", fiscalYear: 2024, concept: "PaymentsOfDividendsCommonStock", value: 0, form: "10-K", filedAt: "2025-02-15" },
+    ]);
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    expect(m.status).toBe("not_applicable");
+    expect(m.reason).toBe("Nessun dividendo distribuito");
+  });
+
+  it("payoutFcf fallback is not_applicable when the approximation gives zero", () => {
+    seedKo(repos, { dividends: [] });
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    expect(m.status).toBe("not_applicable");
+    expect(m.reason).toBe("Nessun dividendo distribuito");
+  });
+
+  it("fcfCoverageMin5y takes dividends per share from the FMP series, not the EDGAR concept", () => {
+    repos.companies.upsert({ ticker: "KO", name: "Coca-Cola", cik: "21344", inSp500: true });
+    repos.fundamentals.upsertMany(
+      edgarRowsFor()
+        .filter((r) => r.concept !== "CommonStockDividendsPerShareDeclared")
+        .map((r) => ({ ticker: "KO", ...r })),
+    );
+    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }]);
+    repos.dividends.upsertMany("KO", [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map((y) => ({ exDate: `${y}-03-14`, amount: 1 })));
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "fcfCoverageMin5y")!;
+    expect(m.status).toBe("ok");
+    // FCF per share = 9000 / 4300, dividend per share = 1.
+    expect(m.value).toBeCloseTo(9000 / 4300, 6);
+  });
 });
