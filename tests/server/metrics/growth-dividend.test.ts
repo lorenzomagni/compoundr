@@ -37,6 +37,10 @@ describe("fcfCoverageMin5y", () => {
     const rows = [2020, 2021, 2022, 2023, 2024].map((year) => ({ year, fcfPerShare: 2, dividendPerShare: 0 }));
     expect(fcfCoverageMin5y(rows).status).toBe("not_applicable");
   });
+  it("is not_applicable for a non-payer even when FCF is unknown", () => {
+    const rows = [2020, 2021, 2022, 2023, 2024].map((year, i) => ({ year, fcfPerShare: i === 2 ? null : 2, dividendPerShare: 0 }));
+    expect(fcfCoverageMin5y(rows).status).toBe("not_applicable");
+  });
   it("is missing when an input in the window is unknown", () => {
     const rows = [2020, 2021, 2022, 2023, 2024].map((year, i) => ({ year, fcfPerShare: i === 2 ? null : 2, dividendPerShare: 1 }));
     expect(fcfCoverageMin5y(rows).status).toBe("missing");
