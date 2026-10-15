@@ -34,7 +34,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
         <p className="metric-value">{formatMetric(metric.id, metric.value)}</p>
         {threshold && (
           <p className="metric-threshold muted">
-            soglia {threshold.op === "gte" ? "≥" : "≤"} {formatMetric(metric.id, threshold.value)}
+            soglia {threshold.op === "gte" ? "≥" : threshold.op === "gt" ? ">" : "≤"} {formatMetric(metric.id, threshold.value)}
           </p>
         )}
       </div>
