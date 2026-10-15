@@ -190,7 +190,8 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
 
   const marketValueEquity =
     currentPrice !== null && latest?.sharesOutstanding != null ? currentPrice * latest.sharesOutstanding : null;
-  const approxDividends = latestDividend !== null && latest?.shares ? latestDividend * latest.shares : null;
+  const approxDividends =
+    latestDividend === 0 ? 0 : latestDividend !== null && latest?.shares ? latestDividend * latest.shares : null;
   let payoutFcfMetric: Metric;
   if (latest?.dividendsPaid != null) {
     payoutFcfMetric = payoutFcf(latest.dividendsPaid, latest.fcf);
