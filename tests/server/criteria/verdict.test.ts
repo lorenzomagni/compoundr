@@ -51,7 +51,7 @@ describe("computeVerdict", () => {
   it("an overall score below 50% is Non coerente", () => {
     // "lte" criteria need a large value to fail, so -1 is not a bad value for them.
     const bad: Record<string, number> = { roeAverage10y: -1, epsCagr10y: -1, fcfConversion: -1, interestCoverage: -1, currentRatio: -1, altmanZ: -1, netDebtToEbitda: 99, debtYears: 99, peVsAverage: 9 };
-    const metrics = healthy().map((x) => (x.id in bad ? m(x.id, bad[x.id]) : x));
+    const metrics = healthy().map((x) => (x.id in bad ? m(x.id, bad[x.id] ?? null) : x));
     const v = run(metrics);
     expect(v.overall!).toBeLessThan(0.5);
     expect(v.verdict).toBe("Non coerente");
