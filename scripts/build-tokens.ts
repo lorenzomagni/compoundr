@@ -31,6 +31,8 @@ interface TokensFile {
   type: { families: Record<string, string>; groups: { name: string; family: string; styles: TypeStyle[] }[] };
   spacing: { tokens: Token[] };
   radius: { tokens: Token[] };
+  layout?: { tokens: Token[] };
+  motion?: { tokens: Token[] };
   shadow?: { tokens: Token[] };
 }
 
@@ -82,6 +84,8 @@ function validate(t: TokensFile): void {
   check("color", t.color.tokens);
   check("spacing", t.spacing.tokens);
   check("radius", t.radius.tokens);
+  check("layout", t.layout?.tokens ?? []);
+  check("motion", t.motion?.tokens ?? []);
   check("shadow", t.shadow?.tokens ?? []);
 
   const colorNames = new Set(t.color.tokens.map((x) => x.name));
@@ -137,12 +141,17 @@ function generate(t: TokensFile): string {
   out.push("");
   for (const tok of t.radius.tokens) out.push(`  ${cssName(tok.name)}: ${tok.value};`);
   out.push("");
-  out.push("  /* Type styles: use as `font: var(--type-body);` plus `letter-spacing: var(--type-body-tracking);` where present */");
+  for (const tok of t.layout?.tokens ?? []) out.push(`  ${cssName(tok.name)}: ${tok.value};`);
+  out.push("");
+  for (const tok of t.motion?.tokens ?? []) out.push(`  ${cssName(tok.name)}: ${tok.value};`);
+  out.push("");
+  out.push("  /* Type styles: use as `font: var(--type-body);` plus `letter-spacing: var(--type-body-tracking);` where present. Size only: `font-size: var(--type-body-size);` */");
   for (const g of t.type.groups) {
     for (const s of g.styles) {
       const weight = s.fontWeight ?? 400;
       const size = s.lineHeight ? `${s.fontSize}/${s.lineHeight}` : s.fontSize;
       out.push(`  --type-${s.name}: ${weight} ${size} var(--font-${s.family ?? g.family});`);
+      out.push(`  --type-${s.name}-size: ${s.fontSize};`);
       if (s.letterSpacing) out.push(`  --type-${s.name}-tracking: ${s.letterSpacing};`);
     }
   }
@@ -239,7 +248,8 @@ function main(): void {
     return;
   }
   if (mode === "check") {
-    const current = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
+    // Line endings are normalised so a CRLF checkout (core.autocrlf) does not look out of date.
+    const current = fs.existsSync(out) ? fs.readFileSync(out, "utf8").replace(/\r\n/g, "\n") : "";
     if (current !== css) fail(`${path.relative(ROOT, out)} is out of date. Run "npm run tokens:build" and commit the result.`);
     console.log("tokens: up to date");
     return;

@@ -27,30 +27,49 @@
   --radius-lg: 10px;
   --radius-pill: 9999px;
 
-  /* Type styles: use as `font: var(--type-body);` plus `letter-spacing: var(--type-body-tracking);` where present */
+  --content-max: 1440px;
+
+  --motion-fast: 150ms ease-out;
+
+  /* Type styles: use as `font: var(--type-body);` plus `letter-spacing: var(--type-body-tracking);` where present. Size only: `font-size: var(--type-body-size);` */
   --type-display-xl: 500 72px/76px var(--font-display);
+  --type-display-xl-size: 72px;
   --type-display-xl-tracking: -0.02em;
   --type-display-lg: 500 48px/54px var(--font-display);
+  --type-display-lg-size: 48px;
   --type-display-lg-tracking: -0.015em;
   --type-display-md: 500 36px/42px var(--font-display);
+  --type-display-md-size: 36px;
   --type-display-md-tracking: -0.01em;
   --type-heading-lg: 500 28px/34px var(--font-display);
+  --type-heading-lg-size: 28px;
   --type-heading-lg-tracking: -0.005em;
   --type-heading-md: 600 20px/28px var(--font-sans);
+  --type-heading-md-size: 20px;
   --type-heading-sm: 600 16px/24px var(--font-sans);
+  --type-heading-sm-size: 16px;
   --type-body-lg: 400 16px/26px var(--font-sans);
+  --type-body-lg-size: 16px;
   --type-body: 400 14px/22px var(--font-sans);
+  --type-body-size: 14px;
   --type-body-sm: 400 13px/20px var(--font-sans);
+  --type-body-sm-size: 13px;
   --type-caption: 400 12px/16px var(--font-sans);
+  --type-caption-size: 12px;
   --type-caption-tracking: 0.01em;
   --type-overline: 600 11px/16px var(--font-sans);
+  --type-overline-size: 11px;
   --type-overline-tracking: 0.14em;
   --type-figure-xl: 500 44px/48px var(--font-mono);
+  --type-figure-xl-size: 44px;
   --type-figure-xl-tracking: -0.02em;
   --type-figure-lg: 500 28px/32px var(--font-mono);
+  --type-figure-lg-size: 28px;
   --type-figure-lg-tracking: -0.01em;
   --type-figure-md: 400 16px/24px var(--font-mono);
+  --type-figure-md-size: 16px;
   --type-figure-sm: 400 13px/20px var(--font-mono);
+  --type-figure-sm-size: 13px;
 }
 
 /* dark (default) */
@@ -65,6 +84,7 @@
   --line-strong: #3d4757;
   --line-control: #6b7587;
   --ink: #f1ece1;
+  --ink-strong: #ffffff;
   --ink-muted: #a3a8b2;
   --ink-faint: #7d8493;
   --gold: #c9a55c;
@@ -98,6 +118,7 @@
     --line-strong: #b9ae97;
     --line-control: #7d745f;
     --ink: #14171c;
+    --ink-strong: #0b0d10;
     --ink-muted: #4b515b;
     --ink-faint: #626875;
     --gold: #7d5f17;
@@ -131,6 +152,7 @@
   --line-strong: #b9ae97;
   --line-control: #7d745f;
   --ink: #14171c;
+  --ink-strong: #0b0d10;
   --ink-muted: #4b515b;
   --ink-faint: #626875;
   --gold: #7d5f17;
