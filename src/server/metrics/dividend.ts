@@ -42,6 +42,7 @@ export function fcfCoverageMin5y(
   const window = [...rows].sort((a, b) => a.year - b.year).slice(-5);
   if (window.length === 0) return missing(id);
   if (window.length < 5) return insufficient(id, window.length);
+  if (window.every((r) => r.dividendPerShare === 0)) return notApplicable(id, "Nessun dividendo distribuito");
   if (window.some((r) => r.fcfPerShare === null || r.dividendPerShare === null)) return missing(id);
   const payers = window.filter((r) => r.dividendPerShare! > 0);
   if (payers.length === 0) return notApplicable(id, "Nessun dividendo distribuito");
