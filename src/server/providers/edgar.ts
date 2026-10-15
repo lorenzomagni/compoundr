@@ -22,6 +22,8 @@ export const PINNED_CONCEPTS = [
   "InterestExpense",
   "CashAndCashEquivalentsAtCarryingValue",
   "LongTermDebtCurrent",
+  "PaymentsOfDividendsCommonStock",
+  "PaymentsOfDividends",
 ] as const;
 
 // Read from the dei namespace, not us-gaap; stored under this concept name.
