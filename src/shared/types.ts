@@ -27,4 +27,4 @@ export interface AnnualAmount {
   amount: number | null;
 }
 
-export type Area = "quality" | "earnings" | "dividend" | "valuation";
+export type Area = "quality" | "solidity" | "dividend" | "valuation";
