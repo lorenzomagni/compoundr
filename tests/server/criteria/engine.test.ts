@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { evaluate } from "../../../src/server/criteria/engine";
-import { CRITERIA_V1 } from "../../../src/server/criteria/versions";
+import { CRITERIA_V1, CRITERIA_V2 } from "../../../src/server/criteria/versions";
 import type { Metric } from "../../../src/shared/types";
 
 const m = (id: string, value: number | null, status: Metric["status"]): Metric =>
@@ -50,5 +50,18 @@ describe("evaluate", () => {
     const areaEval = Object.values(r.score.byArea).reduce((s, a) => s + a.evaluated, 0);
     expect(areaPass).toBe(r.score.pass);
     expect(areaEval).toBe(r.score.evaluated);
+  });
+});
+
+describe("CRITERIA_V2", () => {
+  it("is version 2.0.0 and covers exactly the four themes", () => {
+    expect(CRITERIA_V2.version).toBe("2.0.0");
+    expect(new Set(CRITERIA_V2.criteria.map((c) => c.area))).toEqual(new Set(["quality", "solidity", "dividend", "valuation"]));
+  });
+
+  it("altman Z must be strictly above 2.99 to pass", () => {
+    const metrics = [{ id: "altmanZ", value: 2.99, status: "ok", source: [] }] as any;
+    const r = evaluate(metrics, CRITERIA_V2);
+    expect(r.criteria.find((c) => c.id === "altmanZ")!.outcome).toBe("fail");
   });
 });

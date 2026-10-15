@@ -9,12 +9,20 @@ export type MetricId =
   | "dividendCagr5y"
   | "dividendCagr10y"
   | "peVsAverage"
-  | "pFcf";
+  | "pFcf"
+  | "interestCoverage"
+  | "currentRatio"
+  | "netDebtToEbitda"
+  | "altmanZ"
+  | "epsCagr10y"
+  | "fcfCoverageMin5y"
+  | "dividendCutCount10y"
+  | "payoutFcf";
 
 export interface CatalogEntry {
   label: string;
   formula: string;
-  threshold?: { op: "gte" | "lte"; value: number };
+  threshold?: { op: "gte" | "lte" | "gt"; value: number };
   whyItMatters: string;
   version: string;
 }
@@ -103,6 +111,70 @@ export const CATALOG: Record<MetricId, CatalogEntry> = {
     formula: "prezzo / free cash flow per azione",
     whyItMatters:
       "Controllo sulla valutazione basato sulla cassa, indipendente dagli utili contabili. Utile quando gli utili sono distorti da voci straordinarie.",
+    version: V,
+  },
+  interestCoverage: {
+    label: "Copertura degli interessi",
+    formula: "utile operativo / interessi passivi",
+    threshold: { op: "gte", value: 5 },
+    whyItMatters:
+      "Mostra quante volte l'utile operativo copre gli interessi sul debito. Sotto 5 volte, un calo degli utili mette rapidamente sotto pressione i conti.",
+    version: V,
+  },
+  currentRatio: {
+    label: "Indice di liquidità corrente",
+    formula: "attività correnti / passività correnti",
+    threshold: { op: "gte", value: 1 },
+    whyItMatters:
+      "Verifica che l'azienda abbia abbastanza risorse a breve per pagare i debiti in scadenza entro l'anno. Sotto 1 il rischio di tensione di cassa cresce.",
+    version: V,
+  },
+  netDebtToEbitda: {
+    label: "Debito netto / EBITDA",
+    formula: "(debito totale − liquidità) / EBITDA",
+    threshold: { op: "lte", value: 3 },
+    whyItMatters:
+      "Indica in quanti anni di margine operativo lordo si ripagherebbe il debito netto. Oltre 3 anni l'azienda è sensibile ai tassi e ai cicli economici.",
+    version: V,
+  },
+  altmanZ: {
+    label: "Altman Z-score",
+    formula: "punteggio composito di Altman su liquidità, redditività, leva e rotazione degli attivi",
+    threshold: { op: "gt", value: 2.99 },
+    whyItMatters:
+      "Sintetizza in un numero il rischio di dissesto finanziario. Sopra 2,99 l'azienda è considerata in zona sicura; sotto, il rischio merita attenzione.",
+    version: V,
+  },
+  epsCagr10y: {
+    label: "Crescita dell'utile per azione (10 anni)",
+    formula: "tasso di crescita annuo composto dell'EPS, 10 anni",
+    threshold: { op: "gte", value: 0.05 },
+    whyItMatters:
+      "Un utile per azione che cresce con costanza è il motore del valore composto nel lungo periodo. Il 5% annuo è una soglia minima per battere l'inflazione.",
+    version: V,
+  },
+  fcfCoverageMin5y: {
+    label: "Copertura minima del dividendo con FCF (5 anni)",
+    formula: "minimo su 5 anni di free cash flow / dividendi pagati",
+    threshold: { op: "gte", value: 1.2 },
+    whyItMatters:
+      "Guarda l'anno peggiore, non la media: il dividendo è sicuro se la cassa lo copre con margine anche negli anni difficili.",
+    version: V,
+  },
+  dividendCutCount10y: {
+    label: "Tagli del dividendo (10 anni)",
+    formula: "numero di anni con dividendo per azione in calo rispetto all'anno precedente",
+    threshold: { op: "lte", value: 0 },
+    whyItMatters:
+      "Un taglio è il segnale più chiaro che il dividendo non era sostenibile. Per un investitore da reddito la soglia è zero tagli.",
+    version: V,
+  },
+  payoutFcf: {
+    label: "Payout sul free cash flow",
+    formula: "dividendi / free cash flow",
+    threshold: { op: "lte", value: 0.75 },
+    whyItMatters:
+      "Misura quanta cassa libera viene distribuita. Oltre il 75% resta poco margine per investimenti, debito e imprevisti.",
     version: V,
   },
 };

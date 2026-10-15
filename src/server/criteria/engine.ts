@@ -20,7 +20,7 @@ export interface AnalysisResult {
   };
 }
 
-const AREAS: Area[] = ["quality", "earnings", "dividend", "valuation"];
+const AREAS: Area[] = ["quality", "solidity", "dividend", "valuation"];
 
 function outcomeOf(metric: Metric | null, id: string): Outcome {
   if (!metric || metric.status === "missing" || metric.status === "insufficient_data" || metric.status === "not_computable") {
@@ -29,7 +29,12 @@ function outcomeOf(metric: Metric | null, id: string): Outcome {
   if (metric.status === "not_applicable") return "not_applicable";
   const threshold = CATALOG[id as keyof typeof CATALOG].threshold;
   if (!threshold || metric.value === null) return "missing";
-  const passed = threshold.op === "gte" ? metric.value >= threshold.value : metric.value <= threshold.value;
+  const passed =
+    threshold.op === "gte"
+      ? metric.value >= threshold.value
+      : threshold.op === "gt"
+        ? metric.value > threshold.value
+        : metric.value <= threshold.value;
   return passed ? "pass" : "fail";
 }
 
