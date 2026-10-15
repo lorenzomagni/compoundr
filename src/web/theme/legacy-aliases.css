@@ -1,0 +1,45 @@
+/*
+ * Legacy aliases. Hand-written, NOT generated.
+ *
+ * Maps the variable names used by components.css and the React components to the
+ * tokens in tokens.css (generated from design-system/tokens.json). Load it after
+ * tokens.css and before components.css.
+ *
+ * Remove an alias once the component that uses it has been migrated to the new names.
+ * Sizes, layout and motion already use the generated tokens (--type-*-size, --content-max,
+ * --motion-fast) and the page gutter lives in base.css.
+ */
+:root {
+  /* Surfaces and text */
+  --bg: var(--bg-000);
+  --surface: var(--bg-100);
+  --surface-raised: var(--bg-200);
+  --surface-hover: var(--bg-300);
+  --border: var(--line-subtle);
+  --border-strong: var(--line-strong);
+  --text: var(--ink);
+  --muted: var(--ink-muted);
+  --muted-soft: var(--ink-faint);
+  --header-bg: color-mix(in srgb, var(--bg-000) 80%, transparent);
+
+  /* Accent and state colours */
+  --accent: var(--gold-fill);
+  --accent-ink: var(--gold);
+  --accent-solid: var(--gold-fill);
+  --accent-solid-hover: color-mix(in srgb, var(--gold-fill) 85%, #000);
+  --on-accent: var(--on-gold);
+  --pass: var(--gain);
+  --pass-ink: var(--gain);
+  --fail: var(--loss);
+  --fail-ink: var(--loss);
+  --missing: var(--gold-fill);
+  --missing-ink: var(--gold);
+  --info-ink: var(--info);
+  --glow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  --hero-gradient:
+    radial-gradient(900px 420px at 10% -10%, color-mix(in srgb, var(--gold-fill) 14%, transparent), transparent 60%),
+    radial-gradient(700px 360px at 95% 0%, color-mix(in srgb, var(--info) 8%, transparent), transparent 60%);
+
+  /* Radius */
+  --radius: var(--radius-lg);
+}
