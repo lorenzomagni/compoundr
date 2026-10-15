@@ -4,12 +4,15 @@
 
 ```
 design-system/
-  tokens.json          colours (two themes), type, spacing, radius, shadows
+  tokens.json          colours (two themes), type, layout, motion, spacing, radius, shadows
   CHANGELOG.md         version history and versioning policy
   RELEASE_NOTES_v1.0.0.md
   docs/                brand book, data display rules, component guidelines
 scripts/build-tokens.ts
-src/web/theme/tokens.css   generated
+src/web/theme/
+  tokens.css           generated from tokens.json
+  base.css             hand-written global styles and --page-gutter
+  legacy-aliases.css   hand-written aliases for pre-release names, to be removed once unused
 ```
 
 ## Commands
@@ -47,7 +50,9 @@ Dark is the default on `:root`. Light applies through `[data-theme="light"]`, or
 }
 ```
 
-Type styles are shorthands (`--type-<name>`), with `--type-<name>-tracking` where the style sets letter spacing. Font stacks are `--font-display`, `--font-sans` and `--font-mono`.
+Type styles are shorthands (`--type-<name>`), with `--type-<name>-tracking` where the style sets letter spacing. For size only, use `--type-<name>-size`, for example `font-size: var(--type-body-size)`. Font stacks are `--font-display`, `--font-sans` and `--font-mono`.
+
+Layout and motion: `--content-max` (page grid width), `--motion-fast` (150ms, hover and focus only). The page gutter `--page-gutter` lives in `base.css`: 16px on phones, `space-10` from 768px.
 
 ### Charts and animation
 
@@ -55,7 +60,7 @@ No TypeScript theme file is generated. SVG attributes accept CSS variables, so R
 
 ## Fonts
 
-The tokens name Newsreader, IBM Plex Sans and IBM Plex Mono with system fallbacks. The build does not load fonts. Self-host them (for example with `@fontsource` packages) or add a Google Fonts link in `index.html`.
+The tokens name Newsreader, IBM Plex Sans and IBM Plex Mono with system fallbacks. The app loads them with a Google Fonts link in `index.html`. The build does not load fonts. If you need offline use, self-host them instead (for example with `@fontsource` packages) and remove the link.
 
 ## Republishing to the design-system artifact
 
