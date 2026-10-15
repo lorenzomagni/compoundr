@@ -59,4 +59,15 @@ describe("rule catalogue", () => {
   it("absent metrics do not fire", () => {
     for (const r of RULES) expect(r.when({})).toBe(false);
   });
+
+describe("dividend.cut special-dividend note", () => {
+  const SENTENCE = "Un dividendo straordinario può essere incluso in uno degli anni.";
+  it("is omitted when the cut metric carries no reason", () => {
+    expect(rule("dividend.cut").text(facts({ dividendCutCount10y: 1 }))).not.toContain(SENTENCE);
+  });
+  it("is included when the cut metric carries a reason", () => {
+    const f: Facts = { dividendCutCount10y: { value: 1, status: "ok", reason: "Un dividendo straordinario può essere incluso in uno degli anni" } };
+    expect(rule("dividend.cut").text(f)).toContain(SENTENCE);
+  });
+});
 });

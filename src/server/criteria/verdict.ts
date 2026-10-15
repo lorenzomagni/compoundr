@@ -39,7 +39,7 @@ export function computeVerdict(result: AnalysisResult, metrics: Metric[]): Verdi
   const redFlags = redFlagsOf(metrics);
 
   let verdict: Verdict;
-  if (evaluableShare < 0.7 || overall === null) verdict = "Dati insufficienti";
+  if (evaluableShare < 0.7 || overall === null || percents.length < 2) verdict = "Dati insufficienti";
   else if (overall < 0.5) verdict = "Non coerente";
   else if (overall >= 0.75 && redFlags.length === 0) verdict = "Coerente";
   else verdict = "Da approfondire";

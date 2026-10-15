@@ -25,7 +25,7 @@ const NO_SIGNAL = "Nessuna indicazione significativa per questo tema.";
 
 function toFacts(metrics: Metric[]): Facts {
   const facts: Facts = {};
-  for (const m of metrics) facts[m.id] = { value: m.value, status: m.status };
+  for (const m of metrics) facts[m.id] = { value: m.value, status: m.status, ...(m.reason ? { reason: m.reason } : {}) };
   return facts;
 }
 

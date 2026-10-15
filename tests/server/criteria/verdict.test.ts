@@ -63,4 +63,19 @@ describe("computeVerdict", () => {
     expect(v.themes.find((t) => t.area === "valuation")!.percent).toBeNull();
     expect(v.overall).toBeCloseTo(1, 6);
   });
+
+  it("fewer than two themes with a percent gives Dati insufficienti", () => {
+    const solidityOnly = new Set(["interestCoverage", "currentRatio", "netDebtToEbitda", "altmanZ", "debtYears"]);
+    const metrics = healthy().map((x) => (solidityOnly.has(x.id) ? x : m(x.id, null, "not_applicable")));
+    const v = run(metrics);
+    expect(v.themes.filter((t) => t.percent !== null)).toHaveLength(1);
+    expect(v.verdict).toBe("Dati insufficienti");
+  });
+
+  it("low FCF coverage is a red flag and prevents Coerente even with a high score", () => {
+    const metrics = healthy().map((x) => (x.id === "fcfCoverageMin5y" ? m("fcfCoverageMin5y", 0.8) : x));
+    const v = run(metrics);
+    expect(v.redFlags.map((f) => f.id)).toContain("lowFcfCoverage");
+    expect(v.verdict).not.toBe("Coerente");
+  });
 });

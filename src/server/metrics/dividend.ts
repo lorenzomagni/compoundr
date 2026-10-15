@@ -80,6 +80,7 @@ export function dividendCutCount10y(series: AnnualAmount[]) {
 export function payoutFcf(dividendsTotal: number | null, fcfTotal: number | null) {
   const id = "payoutFcf";
   if (dividendsTotal === null || fcfTotal === null) return missing(id);
+  if (dividendsTotal === 0) return notApplicable(id, "Nessun dividendo distribuito");
   if (fcfTotal <= 0)
     return notComputable(id, "Free cash flow non positivo: il payout sul FCF non è interpretabile");
   return ok(id, dividendsTotal / fcfTotal);
