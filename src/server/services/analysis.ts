@@ -2,12 +2,15 @@ import type { Metric, AnnualAmount } from "../../shared/types";
 import { CATALOG, type CatalogEntry, type MetricId } from "../../shared/metric-catalog";
 import type { Repositories } from "../db/repositories";
 import { evaluate, type AnalysisResult } from "../criteria/engine";
-import { CRITERIA_V1 } from "../criteria/versions";
-import { roeAverage, marginVariability, debtYears } from "../metrics/quality";
+import { CRITERIA_V2 } from "../criteria/versions";
+import { computeVerdict, type VerdictResult } from "../criteria/verdict";
+import { buildNarrative, type Narrative } from "../analyst/paragraphs";
+import { roeAverage, marginVariability, debtYears, epsCagr10y } from "../metrics/quality";
+import { interestCoverage, currentRatio, netDebtToEbitda, altmanZ } from "../metrics/solidity";
 import { fcfConversion, ownerEarnings } from "../metrics/earnings";
-import { payoutRatio, dividendStreakYears, dividendCagr } from "../metrics/dividend";
+import { payoutRatio, dividendStreakYears, dividendCagr, fcfCoverageMin5y, dividendCutCount10y, payoutFcf } from "../metrics/dividend";
 import { peVsAverage, pFcf } from "../metrics/valuation";
-import { insufficient, mean, MIN_YEARS } from "../metrics/common";
+import { insufficient, mean, notApplicable, MIN_YEARS } from "../metrics/common";
 
 export interface FinancialYear {
   fiscalYear: number;
@@ -21,6 +24,17 @@ export interface FinancialYear {
   capex: number | null;
   shares: number | null;
   dividendPerShare: number | null;
+  interestExpense: number | null;
+  currentAssets: number | null;
+  currentLiabilities: number | null;
+  cash: number | null;
+  currentDebt: number | null;
+  workingCapital: number | null;
+  retainedEarnings: number | null;
+  totalAssets: number | null;
+  totalLiabilities: number | null;
+  ebitda: number | null;
+  sharesOutstanding: number | null;
 }
 
 export interface HistoryPoint {
@@ -44,6 +58,8 @@ export interface AnalysisView {
   summary: { price: number | null; dividendYield: number | null };
   history: HistoryPoint[];
   freshness: { edgar: Freshness | null; fmp: Freshness | null };
+  verdict: VerdictResult;
+  narrative: Narrative;
 }
 
 // Cache entries record when data was fetched and when it expires; the UI shows both.
@@ -62,6 +78,14 @@ const SOURCES: Record<string, string[]> = {
   dividendCagr10y: ["FMP"],
   peVsAverage: ["SEC EDGAR", "FMP"],
   pFcf: ["SEC EDGAR", "FMP"],
+  interestCoverage: ["SEC EDGAR"],
+  currentRatio: ["SEC EDGAR"],
+  netDebtToEbitda: ["SEC EDGAR"],
+  altmanZ: ["SEC EDGAR", "FMP"],
+  epsCagr10y: ["SEC EDGAR"],
+  fcfCoverageMin5y: ["SEC EDGAR"],
+  dividendCutCount10y: ["FMP"],
+  payoutFcf: ["SEC EDGAR", "FMP"],
 };
 
 function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
@@ -76,19 +100,35 @@ function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
     .map(([fiscalYear, c]) => {
       const ocf = c.get("NetCashProvidedByUsedInOperatingActivities") ?? null;
       const capex = c.get("PaymentsToAcquirePropertyPlantAndEquipment") ?? null;
+      const operatingIncome = c.get("OperatingIncomeLoss") ?? null;
+      const depreciation = c.get("DepreciationDepletionAndAmortization") ?? null;
+      const currentAssets = c.get("AssetsCurrent") ?? null;
+      const currentLiabilities = c.get("LiabilitiesCurrent") ?? null;
       return {
         fiscalYear,
         netIncome: c.get("NetIncomeLoss") ?? null,
         equity: c.get("StockholdersEquity") ?? null,
-        operatingIncome: c.get("OperatingIncomeLoss") ?? null,
+        operatingIncome,
         // Companies report revenue under either the classic or the ASC 606 concept.
         revenue: c.get("Revenues") ?? c.get("RevenueFromContractWithCustomerExcludingAssessedTax") ?? null,
         longTermDebt: c.get("LongTermDebtNoncurrent") ?? null,
         fcf: ocf !== null && capex !== null ? ocf - capex : null,
-        depreciation: c.get("DepreciationDepletionAndAmortization") ?? null,
+        depreciation,
         capex,
         shares: c.get("WeightedAverageNumberOfDilutedSharesOutstanding") ?? null,
         dividendPerShare: c.get("CommonStockDividendsPerShareDeclared") ?? null,
+        interestExpense: c.get("InterestExpense") ?? null,
+        currentAssets,
+        currentLiabilities,
+        cash: c.get("CashAndCashEquivalentsAtCarryingValue") ?? null,
+        currentDebt: c.get("LongTermDebtCurrent") ?? null,
+        workingCapital: currentAssets !== null && currentLiabilities !== null ? currentAssets - currentLiabilities : null,
+        retainedEarnings: c.get("RetainedEarningsAccumulatedDeficit") ?? null,
+        totalAssets: c.get("Assets") ?? null,
+        totalLiabilities: c.get("Liabilities") ?? null,
+        ebitda: operatingIncome !== null && depreciation !== null ? operatingIncome + depreciation : null,
+        // dei value from the cover page of the 10-K; the market value uses the latest filing only.
+        sharesOutstanding: c.get("EntityCommonStockSharesOutstanding") ?? null,
       };
     });
 }
@@ -144,6 +184,12 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
       ? insufficient("peVsAverage", historicalPe.length)
       : peVsAverage(currentPe, avgPe10y);
 
+  const marketValueEquity =
+    currentPrice !== null && latest?.sharesOutstanding != null ? currentPrice * latest.sharesOutstanding : null;
+  const dividendsTotal = latestDividend !== null && latest?.shares ? latestDividend * latest.shares : null;
+  const payoutFcfMetric =
+    latestDividend === 0 ? notApplicable("payoutFcf", "Nessun dividendo distribuito") : payoutFcf(dividendsTotal, latest?.fcf ?? null);
+
   const raw: Metric[] = [
     roeAverage(years),
     marginVariability(years),
@@ -157,6 +203,31 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
     dividendCagr(series, 10),
     peMetric,
     pFcf(currentPrice, fcfPerShare),
+    interestCoverage(latest?.operatingIncome ?? null, latest?.interestExpense ?? null, latest?.longTermDebt ?? null),
+    currentRatio(latest?.currentAssets ?? null, latest?.currentLiabilities ?? null),
+    netDebtToEbitda(latest?.longTermDebt ?? null, latest?.currentDebt ?? null, latest?.cash ?? null, latest?.ebitda ?? null),
+    altmanZ(
+      {
+        workingCapital: latest?.workingCapital ?? null,
+        retainedEarnings: latest?.retainedEarnings ?? null,
+        totalAssets: latest?.totalAssets ?? null,
+        ebit: latest?.operatingIncome ?? null,
+        marketValueEquity,
+        totalLiabilities: latest?.totalLiabilities ?? null,
+        sales: latest?.revenue ?? null,
+      },
+      company.sector ?? null,
+    ),
+    epsCagr10y(years.slice(-11).map((y) => ({ year: y.fiscalYear, eps: epsOf(y) }))),
+    fcfCoverageMin5y(
+      years.map((y) => ({
+        year: y.fiscalYear,
+        fcfPerShare: y.fcf !== null && y.shares ? y.fcf / y.shares : null,
+        dividendPerShare: y.dividendPerShare,
+      })),
+    ),
+    dividendCutCount10y(series),
+    payoutFcfMetric,
   ];
 
   const metrics = raw.map((m) => ({
@@ -176,11 +247,16 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
   const fmpEntry = repos.cache.get(`fmp:prices:${ticker}`);
   const edgarEntry = company.cik ? repos.cache.get(`edgar:facts:${company.cik}`) : undefined;
 
+  const result = evaluate(metrics, CRITERIA_V2);
+  const verdict = computeVerdict(result, metrics);
+
   return {
     ticker,
-    criteriaVersion: CRITERIA_V1.version,
+    criteriaVersion: CRITERIA_V2.version,
     metrics,
-    result: evaluate(metrics, CRITERIA_V1),
+    result,
+    verdict,
+    narrative: buildNarrative(metrics, verdict),
     summary: {
       price: currentPrice,
       dividendYield: latestDividend !== null && currentPrice ? latestDividend / currentPrice : null,
