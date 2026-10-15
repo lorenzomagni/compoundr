@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { openDb } from "../../../src/server/db/schema";
 import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
 import { buildAnalysis } from "../../../src/server/services/analysis";
-import { seedKo } from "./fixtures";
+import { seedKo, edgarRowsFor } from "./fixtures";
 
 let repos: Repositories;
 beforeEach(() => {
@@ -77,5 +77,52 @@ describe("buildAnalysis", () => {
     ]);
     const view = buildAnalysis("KO", { repos });
     expect(view.history.at(-1)!.operatingMargin).toBeCloseTo(11000 / 99000, 6);
+  });
+  it("the view carries a verdict and a narrative built from the criteria", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    const view = buildAnalysis("KO", { repos });
+    expect(view.criteriaVersion).toBe("2.0.0");
+    expect(["Coerente", "Da approfondire", "Non coerente", "Dati insufficienti"]).toContain(view.verdict.verdict);
+    expect(view.narrative.themes.map((t) => t.area).sort()).toEqual(["dividend", "quality", "solidity", "valuation"]);
+  });
+
+  it("Altman Z-score is not_applicable for a Financials company", () => {
+    repos.companies.upsert({ ticker: "JPM", name: "JPMorgan", sector: "Financials", cik: "19617", inSp500: true });
+    repos.fundamentals.upsertMany(
+      edgarRowsFor().map((r) => ({ ticker: "JPM", ...r })),
+    );
+    const jpm = buildAnalysis("JPM", { repos });
+    expect(jpm.metrics.find((x) => x.id === "altmanZ")!.status).toBe("not_applicable");
+  });
+
+  it("shares outstanding missing in the latest filing makes Altman missing, not failed", () => {
+    repos.companies.upsert({ ticker: "NOSH", name: "No shares", cik: "1", inSp500: true });
+    const rows = [
+      ["AssetsCurrent", 5000], ["LiabilitiesCurrent", 3000], ["RetainedEarningsAccumulatedDeficit", 9000],
+      ["Assets", 40000], ["Liabilities", 25000], ["OperatingIncomeLoss", 6000], ["Revenues", 30000],
+    ] as const;
+    repos.fundamentals.upsertMany(
+      rows.map(([concept, value]) => ({ ticker: "NOSH", fiscalYear: 2024, concept, value, form: "10-K", filedAt: "2025-02-15" })),
+    );
+    repos.prices.upsertMany("NOSH", [{ date: "2024-12-30", close: 50 }]);
+    const view = buildAnalysis("NOSH", { repos });
+    expect(view.metrics.find((x) => x.id === "altmanZ")!.status).toBe("missing");
+    const z = view.result.criteria.find((c) => c.id === "altmanZ")!;
+    expect(z.outcome).toBe("missing");
+  });
+
+  it("Altman Z is computed from market value = latest close x shares outstanding", () => {
+    seedKo(repos, { dividends: [] });
+    const withBs = [
+      ["AssetsCurrent", 20000], ["LiabilitiesCurrent", 10000], ["RetainedEarningsAccumulatedDeficit", 30000],
+      ["Assets", 80000], ["Liabilities", 50000], ["EntityCommonStockSharesOutstanding", 4000],
+    ] as const;
+    repos.fundamentals.upsertMany(
+      withBs.map(([concept, value]) => ({ ticker: "KO", fiscalYear: 2024, concept, value, form: "10-K", filedAt: "2025-02-15" })),
+    );
+    const z = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "altmanZ")!;
+    const expected =
+      1.2 * (10000 / 80000) + 1.4 * (30000 / 80000) + 3.3 * (11000 / 80000) + 0.6 * ((62 * 4000) / 50000) + 45000 / 80000;
+    expect(z.value).toBeCloseTo(expected, 6);
   });
 });
