@@ -92,6 +92,27 @@ describe("edgar solidity concepts", () => {
   });
 });
 
+describe("edgar dei facts without a fiscal year", () => {
+  it("produces no row for a dei fact whose fy is null", async () => {
+    const filing = {
+      cik: 5,
+      entityName: "Synthetic",
+      facts: {
+        "us-gaap": {},
+        dei: {
+          EntityCommonStockSharesOutstanding: {
+            label: "Shares",
+            units: { shares: [{ end: "2025-02-05", val: 1000, accn: "E24", fy: null, fp: "FY", form: "10-K", filed: "2025-02-10" }] },
+          },
+        },
+      },
+    };
+    const { fetchFn } = recordedFetch({ [facts("5")]: filing });
+    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    expect(await client.fetchFundamentals("5")).toEqual([]);
+  });
+});
+
 describe("edgar fiscal-year alignment", () => {
   it("assigns each value to the fiscal year it describes, not to a prior-year comparative", async () => {
     const filing = {
