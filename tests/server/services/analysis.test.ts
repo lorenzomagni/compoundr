@@ -125,4 +125,31 @@ describe("buildAnalysis", () => {
       1.2 * (10000 / 80000) + 1.4 * (30000 / 80000) + 3.3 * (11000 / 80000) + 0.6 * ((62 * 4000) / 50000) + 45000 / 80000;
     expect(z.value).toBeCloseTo(expected, 6);
   });
+  it("payoutFcf uses dividends paid (cash-flow outflow reported as a positive number, abs applied)", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    // Sign convention: PaymentsOfDividendsCommonStock is a positive outflow; a negative value is also tolerated via abs.
+    repos.fundamentals.upsertMany([
+      { ticker: "KO", fiscalYear: 2024, concept: "PaymentsOfDividendsCommonStock", value: -2000, form: "10-K", filedAt: "2025-02-15" },
+    ]);
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    // FCF 2024 = 10000 - 1000 = 9000. Approximation would be 0.49 * 4300 / 9000 (different).
+    expect(m.value).toBeCloseTo(2000 / 9000, 6);
+    expect(m.reason ?? "").not.toMatch(/Stima/);
+  });
+
+  it("payoutFcf falls back to the per-share approximation and says so when dividends paid are missing", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    expect(m.value).toBeCloseTo((0.49 * 4300) / 9000, 6);
+    expect(m.reason).toMatch(/Stima: dividendi pagati non disponibili/);
+  });
+
+  it("payoutFcf uses the PaymentsOfDividends fallback concept", () => {
+    seedKo(repos, { dividends: [{ exDate: "2024-03-14", amount: 0.49 }] });
+    repos.fundamentals.upsertMany([
+      { ticker: "KO", fiscalYear: 2024, concept: "PaymentsOfDividends", value: 3000, form: "10-K", filedAt: "2025-02-15" },
+    ]);
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    expect(m.value).toBeCloseTo(3000 / 9000, 6);
+  });
 });

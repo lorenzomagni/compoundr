@@ -35,6 +35,7 @@ export interface FinancialYear {
   totalLiabilities: number | null;
   ebitda: number | null;
   sharesOutstanding: number | null;
+  dividendsPaid: number | null;
 }
 
 export interface HistoryPoint {
@@ -104,6 +105,8 @@ function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
       const depreciation = c.get("DepreciationDepletionAndAmortization") ?? null;
       const currentAssets = c.get("AssetsCurrent") ?? null;
       const currentLiabilities = c.get("LiabilitiesCurrent") ?? null;
+      // The cash-flow statement reports the outflow as a positive number; abs normalises either sign.
+      const paid = c.get("PaymentsOfDividendsCommonStock") ?? c.get("PaymentsOfDividends") ?? null;
       return {
         fiscalYear,
         netIncome: c.get("NetIncomeLoss") ?? null,
@@ -128,6 +131,7 @@ function buildYears(repos: Repositories, ticker: string): FinancialYear[] {
         totalLiabilities: c.get("Liabilities") ?? null,
         ebitda: operatingIncome !== null && depreciation !== null ? operatingIncome + depreciation : null,
         // dei value from the cover page of the 10-K; the market value uses the latest filing only.
+        dividendsPaid: paid !== null ? Math.abs(paid) : null,
         sharesOutstanding: c.get("EntityCommonStockSharesOutstanding") ?? null,
       };
     });
@@ -186,9 +190,21 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
 
   const marketValueEquity =
     currentPrice !== null && latest?.sharesOutstanding != null ? currentPrice * latest.sharesOutstanding : null;
-  const dividendsTotal = latestDividend !== null && latest?.shares ? latestDividend * latest.shares : null;
-  const payoutFcfMetric =
-    latestDividend === 0 ? notApplicable("payoutFcf", "Nessun dividendo distribuito") : payoutFcf(dividendsTotal, latest?.fcf ?? null);
+  const approxDividends = latestDividend !== null && latest?.shares ? latestDividend * latest.shares : null;
+  let payoutFcfMetric: Metric;
+  if (latest?.dividendsPaid != null) {
+    payoutFcfMetric = payoutFcf(latest.dividendsPaid, latest.fcf);
+  } else if (latestDividend === 0) {
+    payoutFcfMetric = notApplicable("payoutFcf", "Nessun dividendo distribuito");
+  } else {
+    payoutFcfMetric = payoutFcf(approxDividends, latest?.fcf ?? null);
+    if (payoutFcfMetric.status === "ok") {
+      payoutFcfMetric = {
+        ...payoutFcfMetric,
+        reason: "Stima: dividendi pagati non disponibili, si usa dividendo per azione × azioni diluite",
+      };
+    }
+  }
 
   const raw: Metric[] = [
     roeAverage(years),

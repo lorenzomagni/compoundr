@@ -64,6 +64,10 @@ describe("edgar solidity concepts", () => {
     ]));
   });
 
+  it("pins both dividends-paid concepts (primary and fallback)", () => {
+    expect(PINNED_CONCEPTS).toEqual(expect.arrayContaining(["PaymentsOfDividendsCommonStock", "PaymentsOfDividends"]));
+  });
+
   it("reads shares outstanding from the dei namespace under its own concept name", async () => {
     const filing = {
       cik: 4,
