@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createEdgarClient } from "../../../src/server/providers/edgar";
+import { createEdgarClient, PINNED_CONCEPTS } from "../../../src/server/providers/edgar";
 import companyFacts from "../../fixtures/edgar-companyfacts.json";
 import tickers from "../../fixtures/sec-company-tickers.json";
 
@@ -53,6 +53,67 @@ describe("edgar client", () => {
     const { fetchFn } = recordedFetch({ [facts("1")]: empty });
     const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
     expect(await client.fetchFundamentals("1")).toEqual([]);
+  });
+});
+
+describe("edgar solidity concepts", () => {
+  it("keeps the balance-sheet and interest concepts needed by the solidity criteria", () => {
+    expect(PINNED_CONCEPTS).toEqual(expect.arrayContaining([
+      "AssetsCurrent", "LiabilitiesCurrent", "RetainedEarningsAccumulatedDeficit",
+      "Assets", "Liabilities", "InterestExpense", "CashAndCashEquivalentsAtCarryingValue", "LongTermDebtCurrent",
+    ]));
+  });
+
+  it("pins both dividends-paid concepts (primary and fallback)", () => {
+    expect(PINNED_CONCEPTS).toEqual(expect.arrayContaining(["PaymentsOfDividendsCommonStock", "PaymentsOfDividends"]));
+  });
+
+  it("reads shares outstanding from the dei namespace under its own concept name", async () => {
+    const filing = {
+      cik: 4,
+      entityName: "Synthetic",
+      facts: {
+        "us-gaap": {},
+        dei: {
+          EntityCommonStockSharesOutstanding: {
+            label: "Shares",
+            units: {
+              shares: [
+                { end: "2025-02-05", val: 1000, accn: "D24", fy: 2024, fp: "FY", form: "10-K", filed: "2025-02-10" },
+                { end: "2025-05-01", val: 999, accn: "Q1", fy: 2025, fp: "Q1", form: "10-Q", filed: "2025-05-02" },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const { fetchFn } = recordedFetch({ [facts("4")]: filing });
+    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const rows = await client.fetchFundamentals("4");
+    expect(rows).toEqual([
+      expect.objectContaining({ fiscalYear: 2024, concept: "EntityCommonStockSharesOutstanding", value: 1000, form: "10-K" }),
+    ]);
+  });
+});
+
+describe("edgar dei facts without a fiscal year", () => {
+  it("produces no row for a dei fact whose fy is null", async () => {
+    const filing = {
+      cik: 5,
+      entityName: "Synthetic",
+      facts: {
+        "us-gaap": {},
+        dei: {
+          EntityCommonStockSharesOutstanding: {
+            label: "Shares",
+            units: { shares: [{ end: "2025-02-05", val: 1000, accn: "E24", fy: null, fp: "FY", form: "10-K", filed: "2025-02-10" }] },
+          },
+        },
+      },
+    };
+    const { fetchFn } = recordedFetch({ [facts("5")]: filing });
+    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    expect(await client.fetchFundamentals("5")).toEqual([]);
   });
 });
 
