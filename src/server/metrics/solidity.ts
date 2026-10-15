@@ -8,13 +8,9 @@ export function interestCoverage(
 ): Metric {
   const id = "interestCoverage";
   if (operatingIncome === null) return missing(id);
-  if (interestExpense === null) {
+  if (interestExpense === null || interestExpense <= 0) {
     if (longTermDebt === 0) return notApplicable(id, "Nessun debito e nessun onere finanziario");
     return missing(id, "Oneri finanziari non riportati nelle fonti");
-  }
-  if (interestExpense <= 0) {
-    if (longTermDebt === 0) return notApplicable(id, "Nessun debito e nessun onere finanziario");
-    return notComputable(id, "Oneri finanziari pari a zero in presenza di debito");
   }
   return ok(id, operatingIncome / interestExpense);
 }
