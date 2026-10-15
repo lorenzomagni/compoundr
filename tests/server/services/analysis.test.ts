@@ -184,4 +184,16 @@ describe("buildAnalysis", () => {
     // FCF per share = 9000 / 4300, dividend per share = 1.
     expect(m.value).toBeCloseTo(9000 / 4300, 6);
   });
+
+  it("payoutFcf for a non-payer with null shares and no dividends paid is not_applicable", () => {
+    repos.companies.upsert({ ticker: "KO", name: "Coca-Cola", cik: "21344", inSp500: true });
+    repos.fundamentals.upsertMany(
+      edgarRowsFor()
+        .filter((r) => r.concept !== "WeightedAverageNumberOfDilutedSharesOutstanding")
+        .map((r) => ({ ticker: "KO", ...r })),
+    );
+    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }]);
+    const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
+    expect(m.status).toBe("not_applicable");
+  });
 });

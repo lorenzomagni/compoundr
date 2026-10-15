@@ -70,7 +70,7 @@ export function CompanyDetail() {
         <dl className="detail-kpis">
           <div className="kpi">
             <dt>Prezzo</dt>
-            <dd>{data.summary.price === null ? "—" : `$${data.summary.price.toFixed(2)}`}</dd>
+            <dd>{data.summary.price === null ? "—" : data.summary.price.toFixed(2).replace(".", ",")}</dd>
           </div>
           <div className="kpi">
             <dt>Rendimento</dt>

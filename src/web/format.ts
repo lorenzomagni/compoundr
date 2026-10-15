@@ -15,7 +15,7 @@ export function formatMetric(id: string, value: number | null): string {
 }
 
 export function formatPercent(value: number | null): string {
-  return value === null ? "—" : `${(value * 100).toFixed(2)}%`;
+  return value === null ? "—" : `${(value * 100).toFixed(2).replace(".", ",")}%`;
 }
 
 export function formatDate(iso: string): string {
