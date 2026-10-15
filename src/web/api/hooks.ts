@@ -82,7 +82,7 @@ export interface AnalysisResponse {
     reason?: string;
     yearsUsed?: number;
     source: string[];
-    catalog: { label: string; formula: string; whyItMatters: string; threshold?: { op: "gte" | "lte"; value: number } };
+    catalog: { label: string; formula: string; whyItMatters: string; threshold?: { op: "gte" | "lte" | "gt"; value: number } };
   }[];
   result: {
     criteria: { id: string; area: string; outcome: string }[];

@@ -66,8 +66,11 @@ export function CriteriaChecklist({ analysis }: { analysis: Analysis }) {
                       <strong>{metric?.catalog.label ?? c.id}</strong>
                       {threshold && (
                         <span className="muted checklist-threshold">
-                          soglia {threshold.op === "gte" ? "≥" : "≤"} {formatMetric(c.id, threshold.value)}
+                          soglia {threshold.op === "gte" ? "≥" : threshold.op === "gt" ? ">" : "≤"} {formatMetric(c.id, threshold.value)}
                         </span>
+                      )}
+                      {metric?.status === "not_computable" && metric.reason && (
+                        <span className="muted checklist-reason">{metric.reason}</span>
                       )}
                     </div>
                     <div className="checklist-right">

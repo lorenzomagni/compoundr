@@ -107,7 +107,7 @@ export function Explore() {
         id="explore-title"
         eyebrow="Universo"
         title="Esplora S&P 500"
-        description="Ogni azienda è valutata sui criteri di qualità, utili, dividendo e valutazione. Le migliori sono in cima."
+        description="Ogni azienda è valutata sui criteri di qualità, solidità, dividendo e valutazione. Le migliori sono in cima."
         actions={
           <button type="button" className="btn btn-secondary" onClick={() => refreshUniverse.mutate()} disabled={refreshUniverse.isPending}>
             <Icon name="refresh" size={16} className={refreshUniverse.isPending ? "spin" : undefined} />

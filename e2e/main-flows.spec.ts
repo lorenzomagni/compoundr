@@ -8,7 +8,7 @@ test("search, open a company, add to watchlist, save a snapshot", async ({ page 
 
   await page.getByRole("tab", { name: "Storico" }).click();
   await page.getByRole("button", { name: "Salva snapshot" }).click();
-  await expect(page.getByText("Versione criteri 1.0.0")).toBeVisible();
+  await expect(page.getByText("Versione criteri 2.0.0")).toBeVisible();
 
   await page.getByRole("link", { name: "Watchlist" }).click();
   await page.getByRole("textbox", { name: "Ticker da aggiungere" }).fill("KO");
