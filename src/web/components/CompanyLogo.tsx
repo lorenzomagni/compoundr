@@ -3,8 +3,8 @@ import { useState } from "react";
 // Two-letter fallback shown when a logo file is missing.
 export function companyInitials(name: string, ticker: string): string {
   const words = name.split(/\s+/).filter((w) => /^\p{L}/u.test(w));
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  if (words.length >= 2) return (words[0]![0]! + words[1]![0]!).toUpperCase();
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
   return ticker.slice(0, 2).toUpperCase();
 }
 
