@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { openDb } from "../../../src/server/db/schema";
-import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
+import { createRepositories, type ApiCallRow, type Repositories } from "../../../src/server/db/repositories";
 import type { Metric } from "../../../src/shared/types";
 
 let repos: Repositories;
@@ -64,5 +64,41 @@ describe("withTransaction", () => {
       }),
     ).toThrow(/NOT NULL|constraint/i);
     expect(repos.fundamentals.listForTicker("KO")).toHaveLength(0);
+  });
+});
+
+describe("apiCalls", () => {
+  const call = (over: Partial<ApiCallRow> = {}): ApiCallRow => ({
+    service: "fmp", dataKind: "marketData", symbol: "AAPL", sent: true,
+    outcome: "ok", httpStatus: 200, reason: null, at: "2026-10-21T10:00:00.000Z", ...over,
+  });
+
+  it("countSent counts only rows with sent = 1 inside the window", () => {
+    repos.apiCalls.record(call());
+    repos.apiCalls.record(call({ at: "2026-10-21T11:00:00.000Z" }));
+    repos.apiCalls.record(call({ sent: false, outcome: "skipped_quota", httpStatus: null }));
+    repos.apiCalls.record(call({ at: "2026-10-20T10:00:00.000Z" }));
+    repos.apiCalls.record(call({ service: "tiingo" }));
+    expect(repos.apiCalls.countSent("fmp", "2026-10-21T00:00:00.000Z")).toBe(2);
+    expect(repos.apiCalls.countSent("fmp", "2026-10-21T00:00:00.000Z", "2026-10-21T10:30:00.000Z")).toBe(1);
+  });
+
+  it("countDistinctSymbols counts each symbol once in the window", () => {
+    repos.apiCalls.record(call());
+    repos.apiCalls.record(call({ at: "2026-10-21T11:00:00.000Z" }));
+    repos.apiCalls.record(call({ symbol: "MSFT" }));
+    repos.apiCalls.record(call({ symbol: null }));
+    repos.apiCalls.record(call({ symbol: "KO", at: "2026-10-20T10:00:00.000Z" }));
+    expect(repos.apiCalls.countDistinctSymbols("fmp", "2026-10-21T00:00:00.000Z")).toBe(2);
+  });
+
+  it("prune removes rows older than the cutoff only", () => {
+    repos.apiCalls.record(call({ at: "2026-10-01T10:00:00.000Z" }));
+    repos.apiCalls.record(call({ at: "2026-10-21T10:00:00.000Z" }));
+    repos.apiCalls.prune("2026-10-10T00:00:00.000Z");
+    const rows = repos.apiCalls.listSince("2026-01-01T00:00:00.000Z");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].at).toBe("2026-10-21T10:00:00.000Z");
+    expect(rows[0].sent).toBe(true);
   });
 });

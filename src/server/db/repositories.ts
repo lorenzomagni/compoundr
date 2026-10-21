@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import type { Metric } from "../../shared/types";
 import type { CriterionResult } from "../criteria/engine";
+import type { DataKind, ServiceName } from "../gateway/rules";
 
 export interface CompanyRow {
   ticker: string;
@@ -53,6 +54,17 @@ export interface SnapshotRecord {
   outcomes: CriterionResult[];
 }
 
+export interface ApiCallRow {
+  service: ServiceName;
+  dataKind: DataKind;
+  symbol: string | null;
+  sent: boolean;
+  outcome: "ok" | "http_error" | "network_error" | "skipped_no_key" | "skipped_quota" | "rejected_by_plan" | "parse_error";
+  httpStatus: number | null;
+  reason: string | null;
+  at: string;
+}
+
 export interface Repositories {
   companies: {
     upsert(row: CompanyRow): void;
@@ -88,6 +100,14 @@ export interface Repositories {
     save(input: { ticker: string; criteriaVersion: string; metrics: Metric[]; outcomes: CriterionResult[] }): string;
     listForTicker(ticker: string): SnapshotRecord[];
     get(id: string): SnapshotRecord | undefined;
+  };
+  // Append-only log of gateway calls, read back to enforce quotas.
+  apiCalls: {
+    record(row: ApiCallRow): void;
+    countSent(service: ServiceName, sinceIso: string, untilIso?: string): number;
+    countDistinctSymbols(service: ServiceName, sinceIso: string): number;
+    listSince(sinceIso: string): ApiCallRow[];
+    prune(beforeIso: string): void;
   };
 }
 
@@ -191,6 +211,33 @@ export function createRepositories(db: Database.Database): Repositories {
       get: (id) => {
         const r = db.prepare("SELECT * FROM snapshots WHERE id = ?").get(id);
         return r ? snapshotFrom(r) : undefined;
+      },
+    },
+    apiCalls: {
+      record: (row) => {
+        db.prepare(
+          "INSERT INTO api_calls (service, data_kind, symbol, sent, outcome, http_status, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ).run(row.service, row.dataKind, row.symbol, row.sent ? 1 : 0, row.outcome, row.httpStatus, row.reason, row.at);
+      },
+      countSent: (service, sinceIso, untilIso) => {
+        const r: any = untilIso === undefined
+          ? db.prepare("SELECT COUNT(*) AS n FROM api_calls WHERE service = ? AND sent = 1 AND at >= ?").get(service, sinceIso)
+          : db.prepare("SELECT COUNT(*) AS n FROM api_calls WHERE service = ? AND sent = 1 AND at >= ? AND at < ?").get(service, sinceIso, untilIso);
+        return r.n;
+      },
+      countDistinctSymbols: (service, sinceIso) => {
+        const r: any = db
+          .prepare("SELECT COUNT(DISTINCT symbol) AS n FROM api_calls WHERE service = ? AND sent = 1 AND symbol IS NOT NULL AND at >= ?")
+          .get(service, sinceIso);
+        return r.n;
+      },
+      listSince: (sinceIso) =>
+        db.prepare("SELECT * FROM api_calls WHERE at >= ? ORDER BY at, id").all(sinceIso).map((r: any) => ({
+          service: r.service, dataKind: r.data_kind, symbol: r.symbol, sent: r.sent === 1, outcome: r.outcome,
+          httpStatus: r.http_status, reason: r.reason, at: r.at,
+        })),
+      prune: (beforeIso) => {
+        db.prepare("DELETE FROM api_calls WHERE at < ?").run(beforeIso);
       },
     },
   };

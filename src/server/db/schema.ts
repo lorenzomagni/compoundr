@@ -53,6 +53,18 @@ CREATE TABLE IF NOT EXISTS snapshots (
   outcomes_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_snapshots_ticker ON snapshots (ticker, created_at);
+CREATE TABLE IF NOT EXISTS api_calls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  service TEXT NOT NULL,
+  data_kind TEXT NOT NULL,
+  symbol TEXT,
+  sent INTEGER NOT NULL,
+  outcome TEXT NOT NULL,
+  http_status INTEGER,
+  reason TEXT,
+  at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_api_calls_service_at ON api_calls (service, at);
 `;
 
 // ":memory:" for tests; otherwise the parent folder is created so first runs work.
