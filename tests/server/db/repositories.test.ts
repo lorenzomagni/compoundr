@@ -98,7 +98,7 @@ describe("apiCalls", () => {
     repos.apiCalls.prune("2026-10-10T00:00:00.000Z");
     const rows = repos.apiCalls.listSince("2026-01-01T00:00:00.000Z");
     expect(rows).toHaveLength(1);
-    expect(rows[0].at).toBe("2026-10-21T10:00:00.000Z");
-    expect(rows[0].sent).toBe(true);
+    expect(rows[0]!.at).toBe("2026-10-21T10:00:00.000Z");
+    expect(rows[0]!.sent).toBe(true);
   });
 });

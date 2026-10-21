@@ -72,7 +72,7 @@ describe("gateway", () => {
     expect(result).toEqual({ service: "fmp", value: "from-fmp" });
     const all = rows();
     expect(all.find((r) => r.service === "tiingo")).toMatchObject({ outcome: "rejected_by_plan", sent: true, httpStatus: 402 });
-    expect(all.find((r) => r.service === "fmp")).toMatchObject({ outcome: "ok", sent: true, httpStatus: 200 });
+    expect(all.find((r) => r.service === "fmp")).toMatchObject({ outcome: "ok", sent: true, httpStatus: null });
   });
 
   it("records 403 as rejected_by_plan too", async () => {
@@ -91,10 +91,56 @@ describe("gateway", () => {
       .route("marketData", "AAPL", async (_s, send) => send(async () => { throw new HttpError(500); }, () => false))
       .catch((e) => e);
     expect(err).toBeInstanceOf(GatewayUnavailable);
-    expect((err as GatewayUnavailable).reasons.map((r) => r.service)).toEqual(["tiingo", "fmp"]);
-    for (const r of (err as GatewayUnavailable).reasons) expect(r.reason.length).toBeGreaterThan(0);
+    expect((err as GatewayUnavailable).reasons).toEqual([
+      { service: "tiingo", reason: "HTTP 500" },
+      { service: "fmp", reason: "no API key configured" },
+    ]);
+    expect((err as GatewayUnavailable).message).toBe(
+      "No data service available: tiingo (HTTP 500); fmp (no API key configured)",
+    );
     expect(rows().find((r) => r.service === "tiingo")).toMatchObject({ outcome: "http_error", httpStatus: 500, sent: true });
   });
+
+  it("stores a null httpStatus on ok rows", async () => {
+    const gw = createGateway({ repos, keys: { fmp: "k", tiingo: null }, now });
+    await gw.route("marketData", "AAPL", async (_s, send) => send(async () => "v", () => false));
+    expect(rows().find((r) => r.outcome === "ok")!.httpStatus).toBeNull();
+  });
+
+  it("logs a send error once even when run wraps it", async () => {
+    const gw = createGateway({ repos, keys: { fmp: "k", tiingo: null }, now });
+    const err = await gw
+      .route("marketData", "AAPL", async (_s, send) => {
+        try {
+          return await send(async () => { throw new HttpError(500); }, () => false);
+        } catch (e) {
+          throw new Error("wrapped", { cause: e });
+        }
+      })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayUnavailable);
+    const fmp = rows().filter((r) => r.service === "fmp");
+    expect(fmp).toHaveLength(1);
+    expect(fmp[0]).toMatchObject({ sent: true, outcome: "http_error", httpStatus: 500 });
+  });
+
+  it("logs a quota block once even when run wraps it", async () => {
+    // One slot left: the first attempt fits, the retry is blocked mid-sequence.
+    for (let i = 0; i < 249; i++) repos.apiCalls.record(row());
+    const gw = createGateway({ repos, keys: { fmp: "k", tiingo: null }, now });
+    const err = await gw
+      .route("marketData", "AAPL", async (_s, send) => {
+        try {
+          return await send(async () => { throw new HttpError(429); }, is429);
+        } catch (e) {
+          throw new Error("wrapped", { cause: e });
+        }
+      })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayUnavailable);
+    const fmp = rows().filter((r) => r.service === "fmp" && r.at === NOW.toISOString());
+    expect(fmp.map((r) => [r.sent, r.outcome])).toEqual([[true, "http_error"], [false, "skipped_quota"]]);
+  }, 15000);
 
   it("counts each retry attempt as a sent call", async () => {
     const gw = createGateway({ repos, keys: { edgar: "ua" }, now });

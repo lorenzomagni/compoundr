@@ -61,7 +61,7 @@ describe("usageFor", () => {
     createRepositories(db).apiCalls.record(call({ service: "fmp" }));
     const restarted = createRepositories(db);
     const day = usageFor("fmp", restarted, NOW)[0];
-    expect(day.used).toBe(1);
-    expect(day.ratio).toBeCloseTo(1 / 250);
+    expect(day!.used).toBe(1);
+    expect(day!.ratio).toBeCloseTo(1 / 250);
   });
 });

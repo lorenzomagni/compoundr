@@ -133,19 +133,20 @@ export function createGateway({ repos, keys, now = () => new Date() }: GatewayOp
           continue;
         }
 
-        let lastSendError: unknown;
+        // Set by the send path, so QuotaBlocked is recognised even when `run` wraps it.
+        let quotaBlocked = false;
         const attempt = async <U>(fn: () => Promise<U>): Promise<U> => {
           const full = fullWindow(service, symbol);
           if (full !== null) {
+            quotaBlocked = true;
             skipped(service, "skipped_quota", `${full} quota reached`);
             throw new QuotaBlocked(`${full} quota reached`);
           }
           try {
             const value = await fn();
-            write({ service, dataKind: kind, symbol, sent: true, outcome: "ok", httpStatus: 200, reason: null, at: now().toISOString() });
+            write({ service, dataKind: kind, symbol, sent: true, outcome: "ok", httpStatus: null, reason: null, at: now().toISOString() });
             return value;
           } catch (error) {
-            lastSendError = error;
             write({
               service, dataKind: kind, symbol, sent: true, ...classify(error),
               reason: safeReason(error, key), at: now().toISOString(),
@@ -154,21 +155,14 @@ export function createGateway({ repos, keys, now = () => new Date() }: GatewayOp
           }
         };
         const send: Send = (fn, isRetryable) =>
-          limiterFor(service).run(() => attempt(fn), (e) => !(e instanceof QuotaBlocked) && isRetryable(e));
+          limiterFor(service).run(() => attempt(fn), (e) => !quotaBlocked && isRetryable(e));
 
         try {
           return { service, value: await run(service, send) };
         } catch (error) {
-          if (error instanceof QuotaBlocked) continue; // already logged and listed
-          const reason = safeReason(error, key);
-          if (error !== lastSendError) {
-            // Failed outside send (no request sent, or a later step such as parsing): log it without counting toward quota.
-            write({
-              service, dataKind: kind, symbol, sent: false, ...classify(error),
-              reason, at: now().toISOString(),
-            });
-          }
-          reasons.push({ service, reason });
+          if (quotaBlocked) continue; // already logged and listed
+          // Failures outside send are not logged: sent=0 rows are only skipped_*, and a send is logged once by send itself.
+          reasons.push({ service, reason: safeReason(error, key) });
         }
       }
 
