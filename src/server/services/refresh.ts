@@ -1,12 +1,12 @@
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
-import type { EdgarClient } from "../providers/edgar";
+import type { EdgarConnector } from "../providers/edgar";
 import type { FmpClient } from "../providers/fmp";
 
 export interface RefreshDeps {
   repos: Repositories;
   cache: Cache;
-  edgar: EdgarClient;
+  edgar: EdgarConnector;
   fmp: FmpClient;
   edgarTtlMs?: number;
   fmpTtlMs?: number;

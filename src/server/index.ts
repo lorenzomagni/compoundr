@@ -2,7 +2,8 @@ import { loadConfig } from "./config";
 import { openDb } from "./db/schema";
 import { createRepositories } from "./db/repositories";
 import { createCache } from "./providers/cache";
-import { createEdgarClient } from "./providers/edgar";
+import { createEdgarConnector } from "./providers/edgar";
+import { createRateLimiter } from "./providers/rate-limiter";
 import { createFmpClient } from "./providers/fmp";
 import { buildServer } from "./api/routes";
 
@@ -12,7 +13,9 @@ async function main() {
   const config = loadConfig(process.env.COMPOUNDR_CONFIG);
   const repos = createRepositories(openDb(config.dbPath));
   const cache = createCache(repos.cache);
-  const edgar = createEdgarClient({ userAgent: config.edgarUserAgent });
+  // Until the gateway is wired into the server, EDGAR keeps its own limiter as the send function.
+  const edgarLimiter = createRateLimiter({ perSecond: 8, maxRetries: 3 });
+  const edgar = createEdgarConnector((fn, isRetryable) => edgarLimiter.run(fn, isRetryable), config.edgarUserAgent);
   const fmp = createFmpClient({ apiKey: config.fmpApiKey, cache: repos.cache });
 
   const app = await buildServer({

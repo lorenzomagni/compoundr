@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z, ZodError } from "zod";
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
-import type { EdgarClient } from "../providers/edgar";
+import type { EdgarConnector } from "../providers/edgar";
 import type { FmpClient } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
 import { refreshCompany } from "../services/refresh";
@@ -11,7 +11,7 @@ import { refreshUniverse } from "../services/universe";
 export interface ApiDeps {
   repos: Repositories;
   cache: Cache;
-  edgar: EdgarClient;
+  edgar: EdgarConnector;
   fmp: FmpClient;
   apiKeyConfigured: boolean;
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
