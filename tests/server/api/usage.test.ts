@@ -24,8 +24,7 @@ async function start(keys: { tiingo: string | null; fmp: string | null }) {
   app = await buildServer({
     repos,
     cache: createCache(repos.cache),
-    edgar: {} as any,
-    fmp: { quotaRemaining: () => 999 } as any,
+    connectors: {} as any,
     apiKeyConfigured: keys.fmp !== null,
     userAgent: AGENT,
     gateway: createGateway({ repos, keys: allKeys, now: () => NOW }),

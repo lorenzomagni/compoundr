@@ -2,11 +2,9 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z, ZodError } from "zod";
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
-import type { EdgarConnector } from "../providers/edgar";
-import type { FmpConnector } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
-import { refreshCompany } from "../services/refresh";
-import { createGateway, type Gateway } from "../gateway/gateway";
+import { refreshCompany, type Connectors } from "../services/refresh";
+import { GatewayUnavailable, type Gateway } from "../gateway/gateway";
 import type { ServiceName } from "../gateway/rules";
 import { usageFor } from "../gateway/usage";
 import { buildUsageView } from "../gateway/usage-view";
@@ -15,13 +13,11 @@ import { refreshUniverse } from "../services/universe";
 export interface ApiDeps {
   repos: Repositories;
   cache: Cache;
-  edgar: EdgarConnector;
-  fmp: FmpConnector;
   apiKeyConfigured: boolean;
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
   userAgent: string;
-  fetchFn?: typeof fetch;
   gateway: Gateway;
+  connectors: Connectors;
   // Which services have a key: /api/usage reports only whether one is set, never its value.
   keys?: Partial<Record<ServiceName, string | null>>;
   now?: () => Date;
@@ -44,7 +40,7 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent, keys } = deps;
+  const { repos, cache, gateway, connectors, apiKeyConfigured, userAgent, keys } = deps;
   const now = deps.now ?? (() => new Date());
   const app = Fastify({ logger: false });
 
@@ -74,20 +70,18 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/refresh", async (req, reply) => {
     try {
-      return await refreshCompany(req.params.ticker, { repos, cache, edgar, fmp });
+      return await refreshCompany(req.params.ticker, { repos, cache, gateway, connectors });
     } catch (error) {
-      // A malformed SEC or FMP payload is shown as one readable sentence, never as the raw validation dump.
+      // A malformed or unavailable SEC payload is shown as one readable sentence, never as the raw validation dump.
       const message =
-        error instanceof ZodError
-          ? `I dati SEC per ${req.params.ticker} non hanno il formato atteso: riprova più tardi`
+        error instanceof ZodError || error instanceof GatewayUnavailable
+          ? `I dati SEC per ${req.params.ticker} non sono disponibili o non hanno il formato atteso: riprova più tardi`
           : (error as Error).message;
       return reply.code(422).send({ message });
     }
   });
 
-  app.post("/api/universe/refresh", async () =>
-    // Temporary until the gateway is injected through ApiDeps: Wikipedia needs no key, the User-Agent stands in as its key.
-    refreshUniverse({ repos, gateway: createGateway({ repos, keys: { wikipedia: userAgent } }), userAgent }));
+  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, gateway, userAgent }));
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/snapshots", async (req, reply) => {
     try {

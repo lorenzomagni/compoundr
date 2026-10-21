@@ -96,10 +96,10 @@ export function CompanyDetail() {
             {(refresh.error as Error).message}
           </span>
         )}
-        {refresh.data?.sources.fmp === "missing" && (
+        {refresh.data?.sources.prices.state === "missing" && (
           <p role="status" className="notice notice-info">
             <Icon name="info" size={16} />
-            <span>Prezzi e dividendi non disponibili per questo titolo: il piano gratuito di FMP non li include. I bilanci SEC sono aggiornati.</span>
+            <span>Prezzi e dividendi non disponibili per questo titolo: nessun servizio dati di mercato ha risposto. I bilanci SEC sono aggiornati.</span>
           </p>
         )}
       </div>

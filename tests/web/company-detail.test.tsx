@@ -117,7 +117,7 @@ describe("Company detail screen", () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         calls.push(`${init?.method ?? "GET"} ${url}`);
         if (url.endsWith("/analysis")) return json(analysis(false));
-        return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "fresh" } });
+        return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", prices: { service: "tiingo", state: "fresh" }, reasons: [] } });
       }),
     );
     renderWith(analysis(false));
@@ -130,7 +130,7 @@ describe("Company detail screen", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         if (init?.method === "POST") {
-          return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "missing", fmpReason: "FMP non include questo dato nel piano gratuito (risposta 402)" } });
+          return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", prices: { service: null, state: "missing" }, reasons: ["tiingo: hour quota reached", "fmp: HTTP 402"] } });
         }
         return json(analysis(false));
       }),
