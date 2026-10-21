@@ -38,7 +38,7 @@ const analysis = (fmpExpired: boolean): AnalysisResponse => ({
   history: [],
   freshness: {
     edgar: { fetchedAt: "2026-10-01T00:00:00.000Z", expired: false },
-    fmp: { fetchedAt: "2025-01-03T00:00:00.000Z", expired: fmpExpired },
+    fmp: { fetchedAt: "2025-01-03T00:00:00.000Z", expired: fmpExpired, service: "tiingo" },
   },
 });
 
@@ -89,6 +89,14 @@ describe("Company detail screen", () => {
     renderWith(analysis(true));
     expect(screen.getByRole("status")).toHaveTextContent(/aggiornati al/i);
     expect(screen.getByRole("status")).toHaveTextContent(/2025/);
+    expect(screen.getByRole("status")).toHaveTextContent(/Dati di mercato: Tiingo/);
+  });
+
+  it("the header names the service that supplied market data", () => {
+    const data = analysis(false);
+    data.freshness.fmp = { fetchedAt: "2025-01-03T00:00:00.000Z", expired: false, service: "fmp" };
+    renderWith(data);
+    expect(screen.getByText(/Dati di mercato: FMP/)).toBeInTheDocument();
   });
 
   it("saving a snapshot adds it to the Storico list without a page reload", async () => {

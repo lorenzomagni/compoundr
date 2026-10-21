@@ -26,6 +26,7 @@ async function start(keys: { tiingo: string | null; fmp: string | null }) {
     cache: createCache(repos.cache),
     connectors: {} as any,
     apiKeyConfigured: keys.fmp !== null,
+    tiingoKeyConfigured: keys.tiingo !== null,
     userAgent: AGENT,
     gateway: createGateway({ repos, keys: allKeys, now: () => NOW }),
     keys: allKeys,
@@ -101,5 +102,29 @@ describe("GET /api/status", () => {
     expect(body.fmpQuotaRemaining).toBe(240);
     expect(body.fmpKeyConfigured).toBe(true);
     expect(body.edgarOk).toBe(true);
+  });
+
+  it("marketKeyConfigured is true with only the Tiingo key", async () => {
+    await start({ tiingo: TIINGO_KEY, fmp: null });
+    const body = (await app.inject({ method: "GET", url: "/api/status" })).json();
+    expect(body.marketKeyConfigured).toBe(true);
+    expect(body.fmpKeyConfigured).toBe(false);
+  });
+
+  it("marketKeyConfigured is true with only the FMP key", async () => {
+    await start({ tiingo: null, fmp: FMP_KEY });
+    expect((await app.inject({ method: "GET", url: "/api/status" })).json().marketKeyConfigured).toBe(true);
+  });
+
+  it("marketKeyConfigured is false with neither key", async () => {
+    await start({ tiingo: null, fmp: null });
+    expect((await app.inject({ method: "GET", url: "/api/status" })).json().marketKeyConfigured).toBe(false);
+  });
+
+  it("the status body never contains a key", async () => {
+    await start({ tiingo: TIINGO_KEY, fmp: FMP_KEY });
+    const res = await app.inject({ method: "GET", url: "/api/status" });
+    expect(res.body).not.toContain(FMP_KEY);
+    expect(res.body).not.toContain(TIINGO_KEY);
   });
 });

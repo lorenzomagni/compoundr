@@ -14,6 +14,8 @@ export interface ApiDeps {
   repos: Repositories;
   cache: Cache;
   apiKeyConfigured: boolean;
+  // Whether a Tiingo key is set: a boolean only, the key never reaches the API layer for status.
+  tiingoKeyConfigured?: boolean;
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
   userAgent: string;
   gateway: Gateway;
@@ -40,7 +42,7 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, gateway, connectors, apiKeyConfigured, userAgent, keys } = deps;
+  const { repos, cache, gateway, connectors, apiKeyConfigured, tiingoKeyConfigured = false, userAgent, keys } = deps;
   const now = deps.now ?? (() => new Date());
   const app = Fastify({ logger: false });
 
@@ -161,6 +163,7 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     const day = usageFor("fmp", repos, now()).find((w) => w.name === "day");
     return {
       fmpKeyConfigured: apiKeyConfigured,
+      marketKeyConfigured: apiKeyConfigured || tiingoKeyConfigured,
       fmpQuotaRemaining: day ? Math.max(0, day.max - day.used) : 0,
       edgarOk: true,
     };

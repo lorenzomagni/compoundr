@@ -34,6 +34,7 @@ async function main() {
     cache,
     connectors,
     apiKeyConfigured: config.fmpApiKey !== null,
+    tiingoKeyConfigured: config.tiingoApiKey !== null,
     userAgent: config.edgarUserAgent,
     gateway,
     keys,

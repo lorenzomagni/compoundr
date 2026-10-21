@@ -5,7 +5,7 @@ import { PageHeader } from "../components/PageHeader";
 import { Icon } from "../components/Icon";
 import { Skeleton } from "../components/EmptyState";
 
-// Lists what the app cannot show without the FMP key. The key itself is never shown here.
+// Lists what the app cannot show without a market data key (Tiingo or FMP). The key itself is never shown here.
 const UNAVAILABLE = [
   "Prezzi storici",
   "Dividendi storici",
@@ -15,7 +15,7 @@ const UNAVAILABLE = [
 
 const STEPS: { title: string; detail: ReactNode }[] = [
   { title: "Copia il file di esempio", detail: <>Copia <code>config/local.example.json</code> in <code>config/local.json</code>.</> },
-  { title: "Inserisci la chiave", detail: <>Incolla la tua chiave nel campo <code>fmpApiKey</code>; se hai anche la chiave Tiingo, inseriscila in <code>tiingoApiKey</code>. Il file resta sul tuo computer.</> },
+  { title: "Inserisci la chiave", detail: <>Incolla la chiave Tiingo nel campo <code>tiingoApiKey</code> e/o la chiave Financial Modeling Prep nel campo <code>fmpApiKey</code>; ne basta una. Il file resta sul tuo computer.</> },
   { title: "Riavvia il server locale", detail: "Al riavvio Compoundr rileva la chiave e abilita prezzi e dividendi." },
 ];
 
@@ -28,13 +28,13 @@ export function Setup() {
       </section>
     );
   }
-  if (data?.fmpKeyConfigured) {
+  if (data?.marketKeyConfigured) {
     return (
       <section aria-labelledby="setup-title" className="screen setup">
         <PageHeader id="setup-title" eyebrow="Configurazione" title="Tutto pronto" />
         <div className="notice notice-ok">
           <Icon name="check" size={16} />
-          <span>La chiave FMP è configurata: tutti i dati sono disponibili.</span>
+          <span>Almeno una chiave dati di mercato (Tiingo o FMP) è configurata: tutti i dati sono disponibili.</span>
         </div>
         <Link to="/" className="btn btn-secondary">
           <Icon name="compass" size={16} /> Vai a Esplora
@@ -48,7 +48,7 @@ export function Setup() {
         id="setup-title"
         eyebrow="Configurazione"
         title="Completa la configurazione"
-        description="Compoundr funziona già con i dati SEC EDGAR. Per completare l'analisi serve la chiave gratuita di Financial Modeling Prep."
+        description="Compoundr funziona già con i dati SEC EDGAR. Per completare l'analisi serve almeno una chiave gratuita per i dati di mercato: Tiingo (consigliata) o FMP (Financial Modeling Prep)."
       />
 
       <div className="setup-grid">

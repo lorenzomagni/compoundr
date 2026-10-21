@@ -53,7 +53,7 @@ describe("buildAnalysis", () => {
     repos.cache.set("market:KO", payload, "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
     const view = buildAnalysis("KO", { repos });
     // The field keeps the name fmp for the UI; it now means "market data freshness".
-    expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true });
+    expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true, service: "tiingo" });
     expect(view.freshness.edgar).toBeNull();
   });
 
@@ -64,6 +64,12 @@ describe("buildAnalysis", () => {
     repos.cache.set("market:KO", payload, new Date(now - 1000).toISOString(), new Date(now + 3600_000).toISOString());
     const view = buildAnalysis("KO", { repos });
     expect(view.freshness.fmp?.expired).toBe(false);
+    expect(view.freshness.fmp?.service).toBe("fmp");
+  });
+
+  it("freshness has a null service when there is no market entry", () => {
+    seedKo(repos, { dividends: [] });
+    expect(buildAnalysis("KO", { repos }).freshness.fmp).toBeNull();
   });
 
   it("freshness ignores the old fmp:prices cache key", () => {

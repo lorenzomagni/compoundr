@@ -3,7 +3,7 @@ import { Tabs } from "radix-ui";
 import { useAnalysis, useCompanies, useRefreshCompany, useSaveSnapshot, useSnapshots } from "../api/hooks";
 import { ScoreBadge } from "../components/ScoreBadge";
 import { MetricCard } from "../components/MetricCard";
-import { StaleBanner } from "../components/StaleBanner";
+import { StaleBanner, marketSourceText } from "../components/StaleBanner";
 import { StatusChip } from "../components/StatusChip";
 import { formatDate, formatPercent } from "../format";
 import { AnalysisPanel } from "../components/AnalysisPanel";
@@ -43,6 +43,7 @@ export function CompanyDetail() {
 
   const { score } = data.result;
   const verdict = score.evaluated === 0 ? null : score.pass === score.evaluated ? "pass" : score.pass === 0 ? "fail" : "na";
+  const marketSource = marketSourceText(data.freshness.fmp?.service);
   const lastFetched = [data.freshness.edgar?.fetchedAt, data.freshness.fmp?.fetchedAt].filter((d): d is string => !!d).sort().at(-1);
 
   return (
@@ -65,6 +66,7 @@ export function CompanyDetail() {
           <p className="muted hero-meta">
             Criteri versione {data.criteriaVersion}
             {lastFetched && <> · Dati del {formatDate(lastFetched)}</>}
+            {marketSource && <> · {marketSource}</>}
           </p>
         </div>
         <dl className="detail-kpis">

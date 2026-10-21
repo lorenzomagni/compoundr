@@ -103,7 +103,7 @@ export interface AnalysisResponse {
   narrative: { themes: { area: string; paragraph: string; ruleIds: string[] }[]; synthesis: string };
   summary: { price: number | null; dividendYield: number | null };
   history: { year: number; netIncome: number | null; roe: number | null; operatingMargin: number | null; dividendPerShare: number | null }[];
-  freshness: { edgar: { fetchedAt: string; expired: boolean } | null; fmp: { fetchedAt: string; expired: boolean } | null };
+  freshness: { edgar: { fetchedAt: string; expired: boolean } | null; fmp: { fetchedAt: string; expired: boolean; service: "tiingo" | "fmp" | null } | null };
 }
 
 export interface SnapshotSummary {
@@ -129,6 +129,7 @@ export interface UsageResponse {
 
 export interface StatusResponse {
   fmpKeyConfigured: boolean;
+  marketKeyConfigured: boolean;
   fmpQuotaRemaining: number;
   edgarOk: boolean;
 }
