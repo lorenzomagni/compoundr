@@ -1,4 +1,5 @@
 import type { Repositories } from "../db/repositories";
+import type { Gateway, Send } from "../gateway/gateway";
 import { fetchLiveConstituents, loadBundledSnapshot, type Constituent } from "./sp500-source";
 
 export interface UniverseResult {
@@ -8,28 +9,45 @@ export interface UniverseResult {
   asOf: string | null;
 }
 
-// Syncs the company table with the current S&P 500 list in one step: live page first, bundled copy as fallback.
-// Companies that left the index are kept in the table, flagged out.
+// A fetch whose single attempt goes through the gateway's send. A non-ok answer carries its status, so it is logged as an http error.
+function fetchThrough(send: Send): typeof fetch {
+  return ((input, init) =>
+    send(
+      async () => {
+        const res = await globalThis.fetch(input, init);
+        if (!res.ok) throw Object.assign(new Error(`Wikipedia ha risposto con stato ${res.status}`), { status: res.status });
+        return res;
+      },
+      (e) => {
+        const status = (e as { status?: unknown }).status;
+        return typeof status !== "number" || status >= 500;
+      },
+    )) as typeof fetch;
+}
+
+// Syncs the company table with the current S&P 500 list in one step, asked to the gateway: live page first, bundled copy as fallback.
+// Companies that left the index are kept in the table, flagged out. If the gateway has nothing to offer, its error is rethrown.
 export async function refreshUniverse(deps: {
   repos: Repositories;
-  fetchFn: typeof fetch;
+  gateway: Gateway;
   userAgent: string;
 }): Promise<UniverseResult> {
-  const { repos, fetchFn, userAgent } = deps;
+  const { repos, gateway, userAgent } = deps;
 
-  let constituents: Constituent[];
-  let source: UniverseResult["source"];
-  let asOf: string | null = null;
-  try {
-    constituents = await fetchLiveConstituents(fetchFn, userAgent);
-    source = "wikipedia";
-    asOf = new Date().toISOString().slice(0, 10);
-  } catch {
-    const snapshot = loadBundledSnapshot();
-    constituents = snapshot.constituents;
-    source = "snapshot";
-    asOf = snapshot.asOf;
-  }
+  const { service, value } = await gateway.route<{ constituents: Constituent[]; asOf: string }>(
+    "constituents",
+    null,
+    async (svc, send) => {
+      if (svc === "snapshot") return loadBundledSnapshot();
+      return {
+        constituents: await fetchLiveConstituents(fetchThrough(send), userAgent),
+        asOf: new Date().toISOString().slice(0, 10),
+      };
+    },
+  );
+  const constituents = value.constituents;
+  const source: UniverseResult["source"] = service === "snapshot" ? "snapshot" : "wikipedia";
+  const asOf = value.asOf;
 
   const current = new Set(constituents.map((c) => c.symbol));
   repos.withTransaction(() => {

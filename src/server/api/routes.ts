@@ -6,6 +6,7 @@ import type { EdgarConnector } from "../providers/edgar";
 import type { FmpClient } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
 import { refreshCompany } from "../services/refresh";
+import { createGateway } from "../gateway/gateway";
 import { refreshUniverse } from "../services/universe";
 
 export interface ApiDeps {
@@ -36,7 +37,7 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent, fetchFn = fetch } = deps;
+  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent } = deps;
   const app = Fastify({ logger: false });
 
   // Errors are returned with a message only, never stack traces or request data.
@@ -76,7 +77,9 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     }
   });
 
-  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, fetchFn, userAgent }));
+  app.post("/api/universe/refresh", async () =>
+    // Temporary until the gateway is injected through ApiDeps: Wikipedia needs no key, the User-Agent stands in as its key.
+    refreshUniverse({ repos, gateway: createGateway({ repos, keys: { wikipedia: userAgent } }), userAgent }));
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/snapshots", async (req, reply) => {
     try {
