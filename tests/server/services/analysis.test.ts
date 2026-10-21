@@ -49,10 +49,27 @@ describe("buildAnalysis", () => {
 
   it("freshness reports when market data was fetched and whether it has expired", () => {
     seedKo(repos, { dividends: [] });
-    repos.cache.set("fmp:prices:KO", "[]", "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
+    const payload = JSON.stringify({ service: "tiingo", prices: [], dividends: [] });
+    repos.cache.set("market:KO", payload, "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
     const view = buildAnalysis("KO", { repos });
+    // The field keeps the name fmp for the UI; it now means "market data freshness".
     expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true });
     expect(view.freshness.edgar).toBeNull();
+  });
+
+  it("freshness reports a market entry still inside its TTL as not expired", () => {
+    seedKo(repos, { dividends: [] });
+    const now = Date.now();
+    const payload = JSON.stringify({ service: "fmp", prices: [], dividends: [] });
+    repos.cache.set("market:KO", payload, new Date(now - 1000).toISOString(), new Date(now + 3600_000).toISOString());
+    const view = buildAnalysis("KO", { repos });
+    expect(view.freshness.fmp?.expired).toBe(false);
+  });
+
+  it("freshness ignores the old fmp:prices cache key", () => {
+    seedKo(repos, { dividends: [] });
+    repos.cache.set("fmp:prices:KO", "[]", "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
+    expect(buildAnalysis("KO", { repos }).freshness.fmp).toBeNull();
   });
 
   it("payout ratio compares dividend per share with earnings per share", () => {

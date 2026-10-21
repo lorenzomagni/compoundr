@@ -107,6 +107,27 @@ describe("refreshCompany", () => {
     expect(result.stale).toBe(true);
     expect(result.sources.prices).toEqual({ service: "tiingo", state: "stale" });
     expect(repos.prices.listForTicker("KO")).toEqual(pricesBefore);
+    // The user can see why the data is stale.
+    expect(result.sources.reasons).toEqual(["tiingo: down", "fmp: down"]);
+  });
+
+  it("an unexpected non-gateway error gives a fixed reason that carries no message content", async () => {
+    const gateway = fakeGateway([{ service: "tiingo" }]);
+    const c = connectors({
+      tiingo: async () => {
+        throw new Error("boom apikey=SECRET-KEY-123");
+      },
+    });
+    // fakeGateway wraps connector errors into GatewayUnavailable, so throw from route directly.
+    const throwing: Gateway = {
+      async route(kind, symbol, run) {
+        if (kind === "marketData") throw new Error("boom apikey=SECRET-KEY-123");
+        return gateway.route(kind, symbol, run);
+      },
+    };
+    const result = await refreshCompany("KO", { repos, cache: createCache(repos.cache), gateway: throwing, connectors: c });
+    expect(result.sources.reasons).toEqual(["Errore inatteso durante il recupero dei prezzi"]);
+    expect(JSON.stringify(result.sources.reasons)).not.toContain("SECRET-KEY-123");
   });
 
   it("with no cache and every market service failing, prices are missing, reasons are listed and nothing is written", async () => {

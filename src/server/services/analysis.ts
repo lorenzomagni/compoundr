@@ -259,7 +259,8 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
     dividendPerShare: y.dividendPerShare,
   }));
 
-  const fmpEntry = repos.cache.get(`fmp:prices:${ticker}`);
+  // Market data (prices and dividends) comes from whichever service answered; the field keeps the name fmp for the UI.
+  const fmpEntry = repos.cache.get(`market:${ticker}`);
   const edgarEntry = company.cik ? repos.cache.get(`edgar:facts:${company.cik}`) : undefined;
 
   const result = evaluate(metrics, CRITERIA_V2);

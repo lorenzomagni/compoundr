@@ -40,6 +40,8 @@ interface MarketData {
   dividends: { exDate: string; amount: number }[];
 }
 
+// Fixed text: the raw error message of an unexpected failure could carry request details.
+const UNEXPECTED_PRICES_ERROR = "Errore inatteso durante il recupero dei prezzi";
 const DAY = 24 * 60 * 60 * 1000;
 
 // Fetch everything first, then write in one transaction, so a failed write leaves no partial data.
@@ -61,23 +63,31 @@ export async function refreshCompany(ticker: string, deps: RefreshDeps): Promise
   let market: MarketData | null = null;
   let pricesState: SourceState = "missing";
   const reasons: string[] = [];
+  let gatewayFailure: GatewayUnavailable | null = null;
   try {
     // One routed call returns prices and dividends together: an empty dividend list is a valid answer and does not move on to the next service.
     const entry = await cache.getOrFetch<MarketData>(`market:${ticker}`, marketTtlMs, async () => {
-      const { service, value } = await gateway.route("marketData", ticker, async (svc, send) => {
-        if (svc === "tiingo") return connectors.tiingo(send).marketData(ticker, yearsAgo(10), today());
-        const fmp = connectors.fmp(send);
-        const [prices, dividends] = await Promise.all([fmp.dailyPrices(ticker, yearsAgo(10), today()), fmp.dividendHistory(ticker)]);
-        return { prices, dividends };
-      });
-      return { service: service as MarketService, prices: value.prices, dividends: value.dividends };
+      try {
+        const { service, value } = await gateway.route("marketData", ticker, async (svc, send) => {
+          if (svc === "tiingo") return connectors.tiingo(send).marketData(ticker, yearsAgo(10), today());
+          const fmp = connectors.fmp(send);
+          const [prices, dividends] = await Promise.all([fmp.dailyPrices(ticker, yearsAgo(10), today()), fmp.dividendHistory(ticker)]);
+          return { prices, dividends };
+        });
+        return { service: service as MarketService, prices: value.prices, dividends: value.dividends };
+      } catch (error) {
+        // The cache may absorb this failure by serving a stale entry: keep the cause so the user can see why.
+        if (error instanceof GatewayUnavailable) gatewayFailure = error;
+        throw error;
+      }
     });
     market = entry.value;
     pricesState = entry.stale ? "stale" : "fresh";
   } catch (error) {
-    if (error instanceof GatewayUnavailable) reasons.push(...error.reasons.map((r) => `${r.service}: ${r.reason}`));
-    else reasons.push((error as Error).message);
+    if (!(error instanceof GatewayUnavailable)) reasons.push(UNEXPECTED_PRICES_ERROR);
   }
+  // Set both when the failure was absorbed by a stale entry and when nothing was cached.
+  if (gatewayFailure) reasons.push(...(gatewayFailure as GatewayUnavailable).reasons.map((r) => `${r.service}: ${r.reason}`));
 
   repos.withTransaction(() => {
     repos.fundamentals.upsertMany(edgarEntry.value.map((r) => ({ ticker, ...r, filedAt: r.filedAt })));
