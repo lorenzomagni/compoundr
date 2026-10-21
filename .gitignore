@@ -2,6 +2,7 @@ node_modules
 dist
 data/
 config/local.json
+.env.local
 *.db
 .superpowers/
 playwright-report/
