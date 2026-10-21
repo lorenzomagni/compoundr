@@ -3,7 +3,7 @@ import { z, ZodError } from "zod";
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
 import type { EdgarConnector } from "../providers/edgar";
-import type { FmpClient } from "../providers/fmp";
+import type { FmpConnector } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
 import { refreshCompany } from "../services/refresh";
 import { createGateway, type Gateway } from "../gateway/gateway";
@@ -16,7 +16,7 @@ export interface ApiDeps {
   repos: Repositories;
   cache: Cache;
   edgar: EdgarConnector;
-  fmp: FmpClient;
+  fmp: FmpConnector;
   apiKeyConfigured: boolean;
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
   userAgent: string;

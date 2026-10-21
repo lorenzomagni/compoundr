@@ -1,13 +1,13 @@
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
 import type { EdgarConnector } from "../providers/edgar";
-import type { FmpClient } from "../providers/fmp";
+import type { FmpConnector } from "../providers/fmp";
 
 export interface RefreshDeps {
   repos: Repositories;
   cache: Cache;
   edgar: EdgarConnector;
-  fmp: FmpClient;
+  fmp: FmpConnector;
   edgarTtlMs?: number;
   fmpTtlMs?: number;
 }
@@ -38,7 +38,7 @@ export async function refreshCompany(ticker: string, deps: RefreshDeps): Promise
   let fmpState: SourceState = "fresh";
   let fmpReason: string | undefined;
   let prices: { date: string; close: number }[] = [];
-  let dividends: { date: string; dividend: number | null }[] = [];
+  let dividends: { exDate: string; amount: number }[] = [];
   try {
     const [p, d] = await Promise.all([
       cache.getOrFetch(`fmp:prices:${ticker}`, fmpTtlMs, () => fmp.dailyPrices(ticker, yearsAgo(10), today())),
@@ -56,11 +56,7 @@ export async function refreshCompany(ticker: string, deps: RefreshDeps): Promise
     repos.fundamentals.upsertMany(edgarEntry.value.map((r) => ({ ticker, ...r, filedAt: r.filedAt })));
     if (fmpState !== "missing" || prices.length > 0) {
       repos.prices.upsertMany(ticker, prices.map((p) => ({ date: p.date, close: p.close })), "fmp");
-      repos.dividends.upsertMany(
-        ticker,
-        dividends.filter((d) => d.dividend !== null).map((d) => ({ exDate: d.date, amount: d.dividend! })),
-        "fmp",
-      );
+      repos.dividends.upsertMany(ticker, dividends, "fmp");
     }
   });
 

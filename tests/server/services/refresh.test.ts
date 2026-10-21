@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { openDb } from "../../../src/server/db/schema";
 import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
 import { createCache } from "../../../src/server/providers/cache";
-import { FmpQuotaExceeded } from "../../../src/server/providers/fmp";
 import { refreshCompany } from "../../../src/server/services/refresh";
 import { edgarRowsFor } from "./fixtures";
 
@@ -18,10 +17,16 @@ const edgarStub = () =>
     fetchFundamentals: async () => edgarRowsFor(),
   }) as any;
 
+class FmpQuotaExceeded extends Error {
+  constructor(quotaPerDay: number) {
+    super(`Limite giornaliero FMP raggiunto (${quotaPerDay} chiamate)`);
+  }
+}
+
 const fmpOk = () =>
   ({
     dailyPrices: async () => [{ date: "2024-06-03", close: 60 }],
-    dividendHistory: async () => [{ date: "2024-03-14", dividend: 0.49 }],
+    dividendHistory: async () => [{ exDate: "2024-03-14", amount: 0.49 }],
     quotaRemaining: () => 100,
   }) as any;
 

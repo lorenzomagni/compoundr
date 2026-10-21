@@ -4,7 +4,7 @@ import { createRepositories } from "./db/repositories";
 import { createCache } from "./providers/cache";
 import { createEdgarConnector } from "./providers/edgar";
 import { createRateLimiter } from "./providers/rate-limiter";
-import { createFmpClient } from "./providers/fmp";
+import { createFmpConnector, FmpNoKey } from "./providers/fmp";
 import { buildServer } from "./api/routes";
 import { createGateway } from "./gateway/gateway";
 
@@ -17,7 +17,14 @@ async function main() {
   // Until the gateway is wired into the server, EDGAR keeps its own limiter as the send function.
   const edgarLimiter = createRateLimiter({ perSecond: 8, maxRetries: 3 });
   const edgar = createEdgarConnector((fn, isRetryable) => edgarLimiter.run(fn, isRetryable), config.edgarUserAgent);
-  const fmp = createFmpClient({ apiKey: config.fmpApiKey, cache: repos.cache });
+  // Until Task 10 routes through the gateway, FMP keeps its own limiter as the send function.
+  const fmpLimiter = createRateLimiter({ perSecond: 5, maxRetries: 2 });
+  const noKey = async (): Promise<never> => {
+    throw new FmpNoKey();
+  };
+  const fmp = config.fmpApiKey
+    ? createFmpConnector((fn, isRetryable) => fmpLimiter.run(fn, isRetryable), config.fmpApiKey)
+    : { dailyPrices: noKey, dividendHistory: noKey };
 
   const keys = {
     tiingo: config.tiingoApiKey,
