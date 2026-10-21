@@ -1,6 +1,10 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
 import { describe, it, expect, beforeEach } from "vitest";
 import { openDb } from "../../../src/server/db/schema";
-import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
+import { createRepositories, type ApiCallRow, type Repositories } from "../../../src/server/db/repositories";
 import type { Metric } from "../../../src/shared/types";
 
 let repos: Repositories;
@@ -46,10 +50,50 @@ describe("cache", () => {
 
 describe("prices and dividends", () => {
   it("upserts prices and dividends for a ticker and lists them back", () => {
-    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }]);
-    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }]);
-    expect(repos.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60 }]);
-    expect(repos.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49 }]);
+    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }], "fmp");
+    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }], "fmp");
+    expect(repos.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60, source: "fmp" }]);
+    expect(repos.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49, source: "fmp" }]);
+  });
+});
+
+describe("source column", () => {
+  const OLD_SCHEMA = `
+    CREATE TABLE prices (ticker TEXT NOT NULL, date TEXT NOT NULL, close REAL NOT NULL, PRIMARY KEY (ticker, date));
+    CREATE TABLE dividends (ticker TEXT NOT NULL, ex_date TEXT NOT NULL, amount REAL NOT NULL, PRIMARY KEY (ticker, ex_date));
+    INSERT INTO prices VALUES ('KO', '2024-01-02', 60);
+    INSERT INTO dividends VALUES ('KO', '2024-03-14', 0.49);
+  `;
+  const oldDbPath = () => {
+    const dir = mkdtempSync(join(tmpdir(), "compoundr-"));
+    const path = join(dir, "old.db");
+    const raw = new Database(path);
+    raw.exec(OLD_SCHEMA);
+    raw.close();
+    return path;
+  };
+
+  it("a database created before the migration gets source = 'fmp' on existing rows", () => {
+    const db = openDb(oldDbPath());
+    const old = createRepositories(db);
+    expect(old.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60, source: "fmp" }]);
+    expect(old.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49, source: "fmp" }]);
+    db.close();
+  });
+
+  it("upsertMany stores the given source", () => {
+    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }], "tiingo");
+    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }], "tiingo");
+    expect(repos.prices.listForTicker("KO")[0]!.source).toBe("tiingo");
+    expect(repos.dividends.listForTicker("KO")[0]!.source).toBe("tiingo");
+  });
+
+  it("opening the same database twice does not fail", () => {
+    const path = oldDbPath();
+    openDb(path).close();
+    const again = openDb(path);
+    expect(createRepositories(again).prices.listForTicker("KO")[0]!.source).toBe("fmp");
+    again.close();
   });
 });
 
@@ -60,9 +104,45 @@ describe("withTransaction", () => {
         repos.fundamentals.upsertMany([
           { ticker: "KO", fiscalYear: 2024, concept: "NetIncomeLoss", value: 1, form: "10-K", filedAt: "2025-02-01" },
         ]);
-        repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: null as unknown as number }]);
+        repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: null as unknown as number }], "fmp");
       }),
     ).toThrow(/NOT NULL|constraint/i);
     expect(repos.fundamentals.listForTicker("KO")).toHaveLength(0);
+  });
+});
+
+describe("apiCalls", () => {
+  const call = (over: Partial<ApiCallRow> = {}): ApiCallRow => ({
+    service: "fmp", dataKind: "marketData", symbol: "AAPL", sent: true,
+    outcome: "ok", httpStatus: 200, reason: null, at: "2026-10-21T10:00:00.000Z", ...over,
+  });
+
+  it("countSent counts only rows with sent = 1 inside the window", () => {
+    repos.apiCalls.record(call());
+    repos.apiCalls.record(call({ at: "2026-10-21T11:00:00.000Z" }));
+    repos.apiCalls.record(call({ sent: false, outcome: "skipped_quota", httpStatus: null }));
+    repos.apiCalls.record(call({ at: "2026-10-20T10:00:00.000Z" }));
+    repos.apiCalls.record(call({ service: "tiingo" }));
+    expect(repos.apiCalls.countSent("fmp", "2026-10-21T00:00:00.000Z")).toBe(2);
+    expect(repos.apiCalls.countSent("fmp", "2026-10-21T00:00:00.000Z", "2026-10-21T10:30:00.000Z")).toBe(1);
+  });
+
+  it("countDistinctSymbols counts each symbol once in the window", () => {
+    repos.apiCalls.record(call());
+    repos.apiCalls.record(call({ at: "2026-10-21T11:00:00.000Z" }));
+    repos.apiCalls.record(call({ symbol: "MSFT" }));
+    repos.apiCalls.record(call({ symbol: null }));
+    repos.apiCalls.record(call({ symbol: "KO", at: "2026-10-20T10:00:00.000Z" }));
+    expect(repos.apiCalls.countDistinctSymbols("fmp", "2026-10-21T00:00:00.000Z")).toBe(2);
+  });
+
+  it("prune removes rows older than the cutoff only", () => {
+    repos.apiCalls.record(call({ at: "2026-10-01T10:00:00.000Z" }));
+    repos.apiCalls.record(call({ at: "2026-10-21T10:00:00.000Z" }));
+    repos.apiCalls.prune("2026-10-10T00:00:00.000Z");
+    const rows = repos.apiCalls.listSince("2026-01-01T00:00:00.000Z");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.at).toBe("2026-10-21T10:00:00.000Z");
+    expect(rows[0]!.sent).toBe(true);
   });
 });

@@ -708,3 +708,20 @@ code {
 .analysis-themes { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 .analysis-theme-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
 .analysis-theme-head h3 { margin: 0; font-size: var(--type-heading-sm-size); }
+
+/* Utilizzo API */
+.usage-summary { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
+.usage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.usage-card { padding: var(--space-5) var(--space-6); min-width: 0; box-sizing: border-box; }
+.usage-card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.usage-bars { list-style: none; margin: 0; padding: 0 var(--space-2); display: grid; gap: 12px; }
+.usage-bar-head { display: flex; justify-content: space-between; gap: 8px; font-size: 0.875rem; margin-bottom: 4px; }
+.usage-track { height: 8px; border-radius: 4px; background: var(--surface-raised); overflow: hidden; }
+.usage-fill { height: 100%; background: var(--pass); }
+.usage-warn .usage-fill { background: var(--missing); }
+.usage-danger .usage-fill { background: var(--fail); }
+.usage-meta { font-size: 0.8125rem; margin-bottom: 0; }
+.usage-chart { margin: 0; }
+.usage-chart svg { width: 100%; height: auto; }
+.usage-legend { list-style: none; margin: 0.5rem 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.8125rem; }
+.usage-reset { font-size: 0.75rem; margin: 0.125rem 0 0; }

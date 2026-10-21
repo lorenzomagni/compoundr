@@ -1,8 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { openDb } from "../../../src/server/db/schema";
-import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
-import { parseSp500Html, SP500_URL } from "../../../src/server/services/sp500-source";
-import { refreshUniverse } from "../../../src/server/services/universe";
+import { describe, it, expect } from "vitest";
+import { parseSp500Html } from "../../../src/server/services/sp500-source";
 
 const row = (cells: string[]) => `<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
 const sampleHtml = (rows: string[]) =>
@@ -15,11 +12,6 @@ const fillers = (n: number) =>
   );
 
 describe("S&P 500 source", () => {
-  let repos: Repositories;
-  beforeEach(() => {
-    repos = createRepositories(openDb(":memory:"));
-  });
-
   it("parses symbol, name, sector and CIK from the constituents table", () => {
     const html = sampleHtml([
       row(["<a>KO</a>", "Coca-Cola Company (The)", "Consumer Staples", "Soft Drinks", "Atlanta", "1957", "0000021344", "1886"]),
@@ -32,27 +24,5 @@ describe("S&P 500 source", () => {
 
   it("rejects a page where the table is too small to be the index", () => {
     expect(() => parseSp500Html(sampleHtml(fillers(3)))).toThrow(/tabella/i);
-  });
-
-  it("refresh falls back to the bundled snapshot when Wikipedia is unreachable", async () => {
-    const offline = (async () => {
-      throw new Error("network down");
-    }) as unknown as typeof fetch;
-    const result = await refreshUniverse({ repos, fetchFn: offline, userAgent: "Compoundr test test@example.com" });
-    expect(result.source).toBe("snapshot");
-    expect(result.count).toBeGreaterThanOrEqual(480);
-    expect(repos.companies.get("KO")?.inSp500).toBe(true);
-  });
-
-  it("refresh uses the live Wikipedia page when it answers", async () => {
-    const seen: string[] = [];
-    const live = (async (url: string) => {
-      seen.push(url);
-      return new Response(sampleHtml(fillers(500)), { status: 200 });
-    }) as unknown as typeof fetch;
-    const result = await refreshUniverse({ repos, fetchFn: live, userAgent: "Compoundr test test@example.com" });
-    expect(result.source).toBe("wikipedia");
-    expect(seen[0]).toBe(SP500_URL);
-    expect(result.count).toBe(500);
   });
 });

@@ -23,12 +23,14 @@ CREATE TABLE IF NOT EXISTS prices (
   ticker TEXT NOT NULL,
   date TEXT NOT NULL,
   close REAL NOT NULL,
+  source TEXT NOT NULL DEFAULT 'fmp',
   PRIMARY KEY (ticker, date)
 );
 CREATE TABLE IF NOT EXISTS dividends (
   ticker TEXT NOT NULL,
   ex_date TEXT NOT NULL,
   amount REAL NOT NULL,
+  source TEXT NOT NULL DEFAULT 'fmp',
   PRIMARY KEY (ticker, ex_date)
 );
 CREATE TABLE IF NOT EXISTS cache (
@@ -53,7 +55,26 @@ CREATE TABLE IF NOT EXISTS snapshots (
   outcomes_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_snapshots_ticker ON snapshots (ticker, created_at);
+CREATE TABLE IF NOT EXISTS api_calls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  service TEXT NOT NULL,
+  data_kind TEXT NOT NULL,
+  symbol TEXT,
+  sent INTEGER NOT NULL,
+  outcome TEXT NOT NULL,
+  http_status INTEGER,
+  reason TEXT,
+  at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_api_calls_service_at ON api_calls (service, at);
 `;
+
+// SQLite has no ADD COLUMN IF NOT EXISTS: add `source` only when an older database lacks it.
+// Existing rows came from FMP, which is the column default.
+function addSourceColumn(db: Database.Database, table: "prices" | "dividends"): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === "source")) db.exec(`ALTER TABLE ${table} ADD COLUMN source TEXT NOT NULL DEFAULT 'fmp'`);
+}
 
 // ":memory:" for tests; otherwise the parent folder is created so first runs work.
 export function openDb(path: string): Database.Database {
@@ -62,5 +83,7 @@ export function openDb(path: string): Database.Database {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA);
+  addSourceColumn(db, "prices");
+  addSourceColumn(db, "dividends");
   return db;
 }

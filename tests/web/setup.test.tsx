@@ -20,8 +20,8 @@ function withStatus(status: StatusResponse, ui: React.ReactNode, initialPath = "
   );
 }
 
-const noKey: StatusResponse = { fmpKeyConfigured: false, fmpQuotaRemaining: 0, edgarOk: true };
-const withKey: StatusResponse = { fmpKeyConfigured: true, fmpQuotaRemaining: 240, edgarOk: true };
+const noKey: StatusResponse = { fmpKeyConfigured: false, marketKeyConfigured: false, fmpQuotaRemaining: 0, edgarOk: true };
+const withKey: StatusResponse = { fmpKeyConfigured: true, marketKeyConfigured: true, fmpQuotaRemaining: 240, edgarOk: true };
 
 afterEach(() => cleanup());
 
@@ -37,6 +37,31 @@ describe("Setup and degraded state", () => {
     expect(screen.getByText("Prezzi storici")).toBeInTheDocument();
     expect(screen.getByText("Dividendi storici")).toBeInTheDocument();
     expect(screen.getByText(/config\/local\.json/)).toBeInTheDocument();
+  });
+
+  it("the setup text lists both market keys and does not call FMP the only source", () => {
+    withStatus(
+      noKey,
+      <Routes>
+        <Route path="/setup" element={<Setup />} />
+      </Routes>,
+      "/setup",
+    );
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/Tiingo/);
+    expect(text).toMatch(/FMP/);
+    expect(text).not.toMatch(/serve la chiave gratuita di Financial Modeling Prep/);
+  });
+
+  it("with only the Tiingo key the setup screen says everything is ready", () => {
+    withStatus(
+      { fmpKeyConfigured: false, marketKeyConfigured: true, fmpQuotaRemaining: 0, edgarOk: true },
+      <Routes>
+        <Route path="/setup" element={<Setup />} />
+      </Routes>,
+      "/setup",
+    );
+    expect(screen.getByText("Tutto pronto")).toBeInTheDocument();
   });
 
   it("the setup screen never displays a key value", () => {

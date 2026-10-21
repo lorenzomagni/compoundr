@@ -2,21 +2,27 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z, ZodError } from "zod";
 import type { Repositories } from "../db/repositories";
 import type { Cache } from "../providers/cache";
-import type { EdgarClient } from "../providers/edgar";
-import type { FmpClient } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
-import { refreshCompany } from "../services/refresh";
+import { refreshCompany, type Connectors } from "../services/refresh";
+import { GatewayUnavailable, type Gateway } from "../gateway/gateway";
+import type { ServiceName } from "../gateway/rules";
+import { usageFor } from "../gateway/usage";
+import { buildUsageView } from "../gateway/usage-view";
 import { refreshUniverse } from "../services/universe";
 
 export interface ApiDeps {
   repos: Repositories;
   cache: Cache;
-  edgar: EdgarClient;
-  fmp: FmpClient;
   apiKeyConfigured: boolean;
+  // Whether a Tiingo key is set: a boolean only, the key never reaches the API layer for status.
+  tiingoKeyConfigured?: boolean;
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
   userAgent: string;
-  fetchFn?: typeof fetch;
+  gateway: Gateway;
+  connectors: Connectors;
+  // Which services have a key: /api/usage reports only whether one is set, never its value.
+  keys?: Partial<Record<ServiceName, string | null>>;
+  now?: () => Date;
 }
 
 const WatchlistInput = z.object({
@@ -36,7 +42,8 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent, fetchFn = fetch } = deps;
+  const { repos, cache, gateway, connectors, apiKeyConfigured, tiingoKeyConfigured = false, userAgent, keys } = deps;
+  const now = deps.now ?? (() => new Date());
   const app = Fastify({ logger: false });
 
   // Errors are returned with a message only, never stack traces or request data.
@@ -65,18 +72,18 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/refresh", async (req, reply) => {
     try {
-      return await refreshCompany(req.params.ticker, { repos, cache, edgar, fmp });
+      return await refreshCompany(req.params.ticker, { repos, cache, gateway, connectors });
     } catch (error) {
-      // A malformed SEC or FMP payload is shown as one readable sentence, never as the raw validation dump.
+      // A malformed or unavailable SEC payload is shown as one readable sentence, never as the raw validation dump.
       const message =
-        error instanceof ZodError
-          ? `I dati SEC per ${req.params.ticker} non hanno il formato atteso: riprova più tardi`
+        error instanceof ZodError || error instanceof GatewayUnavailable
+          ? `I dati SEC per ${req.params.ticker} non sono disponibili o non hanno il formato atteso: riprova più tardi`
           : (error as Error).message;
       return reply.code(422).send({ message });
     }
   });
 
-  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, fetchFn, userAgent }));
+  app.post("/api/universe/refresh", async () => refreshUniverse({ repos, gateway, userAgent }));
 
   app.post<{ Params: { ticker: string } }>("/api/companies/:ticker/snapshots", async (req, reply) => {
     try {
@@ -150,11 +157,17 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     return reply.code(204).send();
   });
 
-  app.get("/api/status", async () => ({
-    fmpKeyConfigured: apiKeyConfigured,
-    fmpQuotaRemaining: fmp.quotaRemaining(),
-    edgarOk: true,
-  }));
+  app.get("/api/usage", async () => buildUsageView(repos, keys ?? {}, now()));
+
+  app.get("/api/status", async () => {
+    const day = usageFor("fmp", repos, now()).find((w) => w.name === "day");
+    return {
+      fmpKeyConfigured: apiKeyConfigured,
+      marketKeyConfigured: apiKeyConfigured || tiingoKeyConfigured,
+      fmpQuotaRemaining: day ? Math.max(0, day.max - day.used) : 0,
+      edgarOk: true,
+    };
+  });
 
   return app;
 }

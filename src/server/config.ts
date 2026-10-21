@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export interface AppConfig {
   fmpApiKey: string | null;
+  tiingoApiKey: string | null;
   edgarUserAgent: string;
   dbPath: string;
   port: number;
@@ -10,6 +11,7 @@ export interface AppConfig {
 
 const RawConfig = z.object({
   fmpApiKey: z.string().min(1).nullable().optional(),
+  tiingoApiKey: z.string().min(1).nullable().optional(),
   edgarUserAgent: z.string(),
   dbPath: z.string().default("data/compoundr.db"),
   port: z.number().int().positive().default(3000),
@@ -44,6 +46,7 @@ export function loadConfig(input?: string | unknown): AppConfig {
   assertContact(parsed.edgarUserAgent);
   return {
     fmpApiKey: parsed.fmpApiKey ?? null,
+    tiingoApiKey: parsed.tiingoApiKey ?? null,
     edgarUserAgent: parsed.edgarUserAgent,
     dbPath: parsed.dbPath,
     port: parsed.port,
