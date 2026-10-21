@@ -83,6 +83,25 @@ describe("Usage screen", () => {
     expect(fmp).toHaveTextContent(/prezzi/i);
   });
 
+  it("a configured networked service shows 'chiave presente'", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json(fixture)));
+    renderPage();
+    const tiingo = await screen.findByRole("article", { name: "tiingo" });
+    expect(tiingo).toHaveTextContent("chiave presente");
+    expect(tiingo).not.toHaveTextContent("non configurato");
+    const fmp = await screen.findByRole("article", { name: "fmp" });
+    expect(fmp).not.toHaveTextContent("chiave presente");
+  });
+
+  it("each bar shows when the window resets", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json(fixture)));
+    renderPage();
+    const tiingo = await screen.findByRole("article", { name: "tiingo" });
+    expect(within(tiingo).getByRole("listitem", { name: /giornaliero/i })).toHaveTextContent("si resetta alle 00:00 UTC");
+    expect(within(tiingo).getByRole("listitem", { name: /mensile/i })).toHaveTextContent("si resetta il 1 del mese");
+    expect(within(tiingo).getByRole("listitem", { name: /orario/i })).toHaveTextContent("si libera gradualmente");
+  });
+
   it("a service with no declared limits shows 'nessun limite dichiarato' and no bar", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => json(fixture)));
     renderPage();

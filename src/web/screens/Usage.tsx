@@ -51,6 +51,11 @@ function ServiceCard({ service }: { service: UsageResponse["services"][number] }
           <StatusChip kind="missing">non configurato</StatusChip> <span className="muted">mancano {SERVICE_DATA[service.name] ?? "dati"}</span>
         </p>
       )}
+      {service.configured && service.name !== "snapshot" && (
+        <p>
+          <StatusChip kind="pass">chiave presente</StatusChip>
+        </p>
+      )}
       {service.windows.length === 0 ? (
         <p className="muted">nessun limite dichiarato</p>
       ) : (
@@ -95,7 +100,7 @@ export function Usage() {
           </div>
           <div className="card">
             <h2>Storico</h2>
-            <UsageHistoryChart history={data.history} generatedAt={data.generatedAt} />
+            <UsageHistoryChart history={data.history} services={data.services} generatedAt={data.generatedAt} />
           </div>
         </>
       )}

@@ -7,8 +7,15 @@ export const WINDOW_LABEL: Record<string, string> = {
   month: "mensile",
 };
 
+function resetText(name: string, resetsAt: string | null): string {
+  if (resetsAt === null) return "si libera gradualmente";
+  const at = new Date(resetsAt);
+  if (name === "month") return `si resetta il ${at.getUTCDate()} del mese`;
+  return `si resetta alle ${at.toISOString().slice(11, 16)} UTC`;
+}
+
 // Colour is never the only signal: used/max, the percentage and the level label are always written out.
-export function UsageBar({ window: w }: { window: { name: string; used: number; max: number; ratio: number } }) {
+export function UsageBar({ window: w }: { window: { name: string; used: number; max: number; ratio: number; resetsAt: string | null } }) {
   const level = saturationLevel(w.ratio);
   const percent = Math.round(w.ratio * 100);
   const label = WINDOW_LABEL[w.name] ?? w.name;
@@ -30,6 +37,7 @@ export function UsageBar({ window: w }: { window: { name: string; used: number; 
       >
         <div className="usage-fill" style={{ width: `${Math.min(100, percent)}%` }} />
       </div>
+      <p className="muted usage-reset">{resetText(w.name, w.resetsAt)}</p>
     </li>
   );
 }

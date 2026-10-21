@@ -722,3 +722,5 @@ code {
 .usage-meta { font-size: 0.8125rem; margin-bottom: 0; }
 .usage-chart { margin: 0; }
 .usage-chart svg { width: 100%; height: auto; }
+.usage-legend { list-style: none; margin: 0.5rem 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.8125rem; }
+.usage-reset { font-size: 0.75rem; margin: 0.125rem 0 0; }
