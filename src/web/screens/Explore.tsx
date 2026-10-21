@@ -7,6 +7,7 @@ import { ScoreBadge } from "../components/ScoreBadge";
 import { PageHeader } from "../components/PageHeader";
 import { EmptyState, Skeleton } from "../components/EmptyState";
 import { Icon } from "../components/Icon";
+import { CompanyLogo } from "../components/CompanyLogo";
 
 type Area = "quality" | "solidity" | "dividend" | "valuation";
 const AREA_LABEL: Record<Area, string> = {
@@ -39,9 +40,12 @@ const columns = [
   columnHelper.accessor("ticker", {
     header: "Ticker",
     cell: (info) => (
-      <Link to={`/companies/${info.getValue()}`} className="ticker-link">
-        {info.getValue()}
-      </Link>
+      <>
+        <CompanyLogo key={info.getValue()} ticker={info.getValue()} name={info.row.original.name} />
+        <Link to={`/companies/${info.getValue()}`} className="ticker-link">
+          {info.getValue()}
+        </Link>
+      </>
     ),
   }),
   columnHelper.accessor("name", { header: "Nome" }),

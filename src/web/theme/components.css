@@ -202,6 +202,22 @@
 }
 .ticker-link:hover { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 span.ticker-link { margin-left: 0; padding: 0; }
+.data-table td[data-col="ticker"] { display: flex; align-items: center; gap: var(--space-2); }
+.company-logo {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  object-fit: contain;
+  border-radius: var(--radius-xs);
+}
+.company-logo-fallback {
+  display: inline-grid;
+  place-items: center;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+}
 .link-inline { display: inline-flex; align-items: center; gap: 4px; font-size: var(--type-body-size); font-weight: 500; color: var(--accent-ink); text-decoration: none; }
 .link-inline:hover { text-decoration: underline; }
 

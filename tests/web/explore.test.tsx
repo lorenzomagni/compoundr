@@ -40,7 +40,7 @@ const rowTickers = () =>
   screen
     .queryAllByRole("row")
     .slice(1)
-    .map((r) => within(r).getAllByRole("cell")[0]!.textContent);
+    .map((r) => within(within(r).getAllByRole("cell")[0]!).getByRole("link").textContent);
 
 // jsdom has no layout engine: give elements a viewport height so the virtualizer renders rows.
 beforeAll(() => {
@@ -78,6 +78,13 @@ describe("Explore screen", () => {
     renderWith(many);
     expect(rowTickers().length).toBeGreaterThan(0);
     expect(rowTickers().length).toBeLessThan(60);
+  });
+
+  it("shows a logo next to each ticker, keyed by the ticker", () => {
+    const { container } = renderWith([company("KO", "Coca-Cola", 5, 6)]);
+    const cell = within(screen.getAllByRole("row")[1]!).getAllByRole("cell")[0]!;
+    expect(cell.querySelector("img")).toHaveAttribute("src", "/logos/KO.png");
+    expect(within(cell).getByRole("link")).toHaveTextContent("KO");
   });
 
   it("the update button asks the server to reload the S&P 500 list", async () => {
