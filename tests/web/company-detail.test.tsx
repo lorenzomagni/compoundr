@@ -38,7 +38,7 @@ const analysis = (fmpExpired: boolean): AnalysisResponse => ({
   history: [],
   freshness: {
     edgar: { fetchedAt: "2026-10-01T00:00:00.000Z", expired: false },
-    fmp: { fetchedAt: "2025-01-03T00:00:00.000Z", expired: fmpExpired },
+    fmp: { fetchedAt: "2025-01-03T00:00:00.000Z", expired: fmpExpired, service: "tiingo" },
   },
 });
 
@@ -89,6 +89,14 @@ describe("Company detail screen", () => {
     renderWith(analysis(true));
     expect(screen.getByRole("status")).toHaveTextContent(/aggiornati al/i);
     expect(screen.getByRole("status")).toHaveTextContent(/2025/);
+    expect(screen.getByRole("status")).toHaveTextContent(/Dati di mercato: Tiingo/);
+  });
+
+  it("the header names the service that supplied market data", () => {
+    const data = analysis(false);
+    data.freshness.fmp = { fetchedAt: "2025-01-03T00:00:00.000Z", expired: false, service: "fmp" };
+    renderWith(data);
+    expect(screen.getByText(/Dati di mercato: FMP/)).toBeInTheDocument();
   });
 
   it("saving a snapshot adds it to the Storico list without a page reload", async () => {
@@ -117,7 +125,7 @@ describe("Company detail screen", () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         calls.push(`${init?.method ?? "GET"} ${url}`);
         if (url.endsWith("/analysis")) return json(analysis(false));
-        return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "fresh" } });
+        return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", prices: { service: "tiingo", state: "fresh" }, reasons: [] } });
       }),
     );
     renderWith(analysis(false));
@@ -130,7 +138,7 @@ describe("Company detail screen", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         if (init?.method === "POST") {
-          return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", fmp: "missing", fmpReason: "FMP non include questo dato nel piano gratuito (risposta 402)" } });
+          return json({ ticker: "KO", stale: false, sources: { edgar: "fresh", prices: { service: null, state: "missing" }, reasons: ["tiingo: hour quota reached", "fmp: HTTP 402"] } });
         }
         return json(analysis(false));
       }),

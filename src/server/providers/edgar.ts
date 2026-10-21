@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRateLimiter } from "./rate-limiter";
+import type { Send } from "../gateway/gateway";
 
 // XBRL concepts used by the metric formulas. Anything else in companyfacts is ignored.
 export const PINNED_CONCEPTS = [
@@ -37,13 +37,7 @@ export interface EdgarFundamental {
   filedAt: string;
 }
 
-export interface EdgarClientOptions {
-  userAgent: string;
-  fetch?: typeof fetch;
-  perSecond?: number;
-}
-
-export interface EdgarClient {
+export interface EdgarConnector {
   tickerToCik(ticker: string): Promise<string | null>;
   fetchFundamentals(cik: string): Promise<EdgarFundamental[]>;
 }
@@ -72,9 +66,10 @@ const CompanyFacts = z.object({
   }),
 });
 
+// The message carries the status only: the gateway logs it as the failure reason and it must never include the URL.
 class HttpError extends Error {
-  constructor(public status: number, url: string) {
-    super(`SEC ${status} su ${url}`);
+  constructor(public status: number) {
+    super(`SEC ${status}`);
   }
 }
 const isRetryable = (e: unknown) => e instanceof HttpError && (e.status === 429 || e.status >= 500);
@@ -82,15 +77,14 @@ const isRetryable = (e: unknown) => e instanceof HttpError && (e.status === 429 
 // SEC's files use "BRK-B" where the market symbol is "BRK.B".
 const secSymbol = (ticker: string) => ticker.toUpperCase().replace(/\./g, "-");
 
-export function createEdgarClient({ userAgent, fetch: fetchFn = fetch, perSecond = 8 }: EdgarClientOptions): EdgarClient {
-  if (!userAgent.trim()) throw new Error("EDGAR richiede uno User-Agent con contatto");
-  const limiter = createRateLimiter({ perSecond, maxRetries: 3 });
+// Every request goes through send, so the gateway logs, quota-checks and retries each attempt.
+export function createEdgarConnector(send: Send, userAgent: string): EdgarConnector {
   let tickerMap: Map<string, string> | null = null;
 
-  async function getJson(url: string): Promise<unknown> {
-    return limiter.run(async () => {
-      const res = await fetchFn(url, { headers: { "User-Agent": userAgent, Accept: "application/json" } });
-      if (!res.ok) throw new HttpError(res.status, url);
+  function getJson(url: string): Promise<unknown> {
+    return send(async () => {
+      const res = await fetch(url, { headers: { "User-Agent": userAgent, Accept: "application/json" } });
+      if (!res.ok) throw new HttpError(res.status);
       return res.json();
     }, isRetryable);
   }

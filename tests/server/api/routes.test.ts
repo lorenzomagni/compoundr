@@ -3,6 +3,7 @@ import { openDb } from "../../../src/server/db/schema";
 import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
 import { createCache } from "../../../src/server/providers/cache";
 import { buildServer } from "../../../src/server/api/routes";
+import { createGateway } from "../../../src/server/gateway/gateway";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { seedKo } from "../services/fixtures";
@@ -11,30 +12,21 @@ const SECRET_KEY = "FMP-SECRET-KEY-42";
 let repos: Repositories;
 let app: FastifyInstance;
 
-const fakeFmp = () =>
-  ({
-    sp500Constituents: async () => [
-      { symbol: "KO", name: "Coca-Cola", sector: "Consumer Staples", cik: "21344" },
-      { symbol: "AAPL", name: "Apple", sector: "Technology", cik: "320193" },
-    ],
-    dailyPrices: async () => [],
-    dividendHistory: async () => [],
-    quotaRemaining: () => 240,
-  }) as any;
+const noConnectors = {
+  tiingo: () => ({ marketData: async () => ({ prices: [], dividends: [] }) }),
+  fmp: () => ({ dailyPrices: async () => [], dividendHistory: async () => [] }),
+  edgar: () => ({ tickerToCik: async () => null, fetchFundamentals: async () => [] }),
+};
 
 beforeEach(async () => {
   repos = createRepositories(openDb(":memory:"));
   app = await buildServer({
     repos,
     cache: createCache(repos.cache),
-    edgar: { tickerToCik: async () => null, fetchFundamentals: async () => [] } as any,
-    fmp: fakeFmp(),
+    connectors: noConnectors,
     apiKeyConfigured: true,
     userAgent: "Compoundr test test@example.com",
-    // The universe test must not reach the network: the bundled snapshot is used instead.
-    fetchFn: (async () => {
-      throw new Error("offline");
-    }) as unknown as typeof fetch,
+    gateway: createGateway({ repos, keys: {} }),
   });
 });
 
@@ -142,10 +134,10 @@ describe("local HTTP API", () => {
     const failing = await buildServer({
       repos,
       cache: createCache(repos.cache),
-      edgar: failingEdgar,
-      fmp: fakeFmp(),
+      connectors: { ...noConnectors, edgar: () => failingEdgar },
       apiKeyConfigured: true,
       userAgent: "Compoundr test test@example.com",
+      gateway: createGateway({ repos, keys: { edgar: "ua" } }),
     });
     seedKo(repos, { dividends: [] });
     const res = await failing.inject({ method: "POST", url: "/api/companies/KO/refresh" });

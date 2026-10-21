@@ -1,31 +1,55 @@
-import { describe, it, expect } from "vitest";
-import { createEdgarClient, PINNED_CONCEPTS } from "../../../src/server/providers/edgar";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import type { Send } from "../../../src/server/gateway/gateway";
+import { createEdgarConnector, PINNED_CONCEPTS } from "../../../src/server/providers/edgar";
 import companyFacts from "../../fixtures/edgar-companyfacts.json";
 import tickers from "../../fixtures/sec-company-tickers.json";
 
-// Serves recorded SEC responses by URL; records every requested URL.
+const UA = "Compoundr test lorenzo.magni@lutech.it";
+
+// Serves recorded SEC responses by URL through a stubbed global fetch; records every requested URL and its headers.
+// The fake send runs the request directly, like a gateway that never retries, and counts the calls.
 function recordedFetch(routes: Record<string, unknown>) {
   const seen: string[] = [];
-  const fetchFn = (async (url: string) => {
+  const headers: Record<string, string>[] = [];
+  vi.stubGlobal("fetch", async (url: string, init?: { headers?: Record<string, string> }) => {
     seen.push(url);
+    headers.push(init?.headers ?? {});
     const body = routes[url];
     if (body === undefined) return new Response("not found", { status: 404 });
     return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-  }) as unknown as typeof fetch;
-  return { fetchFn, seen };
+  });
+  const send = vi.fn(<U,>(fn: () => Promise<U>) => fn()) as unknown as Send & ReturnType<typeof vi.fn>;
+  return { send, seen, headers };
 }
 
 const TICKERS_URL = "https://www.sec.gov/files/company_tickers.json";
 const facts = (cik: string) => `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik.padStart(10, "0")}.json`;
 
-describe("edgar client", () => {
-  it("throws when the User-Agent is not set", () => {
-    expect(() => createEdgarClient({ userAgent: "" })).toThrow(/user-agent/i);
+afterEach(() => vi.unstubAllGlobals());
+
+describe("edgar connector", () => {
+  it("every SEC request goes through send with the User-Agent header", async () => {
+    const { send, seen, headers } = recordedFetch({ [TICKERS_URL]: tickers, [facts("1067983")]: companyFacts });
+    const client = createEdgarConnector(send, UA);
+    await client.tickerToCik("BRK.B");
+    await client.fetchFundamentals("1067983");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(seen).toEqual([TICKERS_URL, facts("1067983")]);
+    expect(headers.every((h) => h["User-Agent"] === UA)).toBe(true);
+  });
+
+  it("a 403 from the SEC is reported without the URL", async () => {
+    vi.stubGlobal("fetch", async () => new Response("forbidden", { status: 403 }));
+    const send = (<U,>(fn: () => Promise<U>) => fn()) as Send;
+    const error = await createEdgarConnector(send, UA).fetchFundamentals("21344").catch((e: Error) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("403");
+    expect((error as Error).message).not.toMatch(/https?:|sec\.gov/);
   });
 
   it("keeps only 10-K annual values for the pinned concepts", async () => {
-    const { fetchFn } = recordedFetch({ [facts("21344")]: companyFacts });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("21344")]: companyFacts });
+    const client = createEdgarConnector(send, UA);
     const rows = await client.fetchFundamentals("21344");
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.form === "10-K")).toBe(true);
@@ -35,14 +59,14 @@ describe("edgar client", () => {
   });
 
   it("returns null for a ticker not in the SEC mapping instead of throwing", async () => {
-    const { fetchFn } = recordedFetch({ [TICKERS_URL]: tickers });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [TICKERS_URL]: tickers });
+    const client = createEdgarConnector(send, UA);
     expect(await client.tickerToCik("ZZZZ")).toBeNull();
   });
 
   it("maps BRK.B to the SEC form BRK-B before lookup", async () => {
-    const { fetchFn, seen } = recordedFetch({ [TICKERS_URL]: tickers });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send, seen } = recordedFetch({ [TICKERS_URL]: tickers });
+    const client = createEdgarConnector(send, UA);
     const cik = await client.tickerToCik("BRK.B");
     expect(cik).toBe("1067983");
     expect(seen).toContain(TICKERS_URL);
@@ -50,8 +74,8 @@ describe("edgar client", () => {
 
   it("yields no rows, not an error, for a company with no pinned concepts", async () => {
     const empty = { cik: 1, entityName: "Empty", facts: { "us-gaap": { OtherConcept: { label: "x", units: {} } } } };
-    const { fetchFn } = recordedFetch({ [facts("1")]: empty });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("1")]: empty });
+    const client = createEdgarConnector(send, UA);
     expect(await client.fetchFundamentals("1")).toEqual([]);
   });
 });
@@ -87,8 +111,8 @@ describe("edgar solidity concepts", () => {
         },
       },
     };
-    const { fetchFn } = recordedFetch({ [facts("4")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("4")]: filing });
+    const client = createEdgarConnector(send, UA);
     const rows = await client.fetchFundamentals("4");
     expect(rows).toEqual([
       expect.objectContaining({ fiscalYear: 2024, concept: "EntityCommonStockSharesOutstanding", value: 1000, form: "10-K" }),
@@ -99,8 +123,8 @@ describe("edgar solidity concepts", () => {
 describe("edgar cik type", () => {
   it("accepts a cik sent as a zero-padded string, as the live API does for some filers", async () => {
     const filing = { cik: "0001858681", entityName: "Synthetic", facts: { "us-gaap": {}, dei: {} } };
-    const { fetchFn } = recordedFetch({ [facts("1858681")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("1858681")]: filing });
+    const client = createEdgarConnector(send, UA);
     expect(await client.fetchFundamentals("1858681")).toEqual([]);
   });
 });
@@ -120,8 +144,8 @@ describe("edgar dei facts without a fiscal year", () => {
         },
       },
     };
-    const { fetchFn } = recordedFetch({ [facts("5")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("5")]: filing });
+    const client = createEdgarConnector(send, UA);
     expect(await client.fetchFundamentals("5")).toEqual([]);
   });
 });
@@ -148,8 +172,8 @@ describe("edgar fiscal-year alignment", () => {
         },
       },
     };
-    const { fetchFn } = recordedFetch({ [facts("1")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("1")]: filing });
+    const client = createEdgarConnector(send, UA);
     const rows = await client.fetchFundamentals("1");
     const byYear = Object.fromEntries(rows.map((r) => [r.fiscalYear, r.value]));
     expect(byYear).toEqual({ 2025: 13107, 2024: 10714 });
@@ -168,8 +192,8 @@ describe("edgar fiscal-year alignment", () => {
         },
       },
     };
-    const { fetchFn } = recordedFetch({ [facts("2")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("2")]: filing });
+    const client = createEdgarConnector(send, UA);
     const rows = await client.fetchFundamentals("2");
     expect(rows).toEqual([expect.objectContaining({ fiscalYear: 2024, concept: "RevenueFromContractWithCustomerExcludingAssessedTax", value: 45000 })]);
   });
@@ -192,8 +216,8 @@ describe("edgar fiscal-year alignment", () => {
         },
       },
     };
-    const { fetchFn } = recordedFetch({ [facts("3")]: filing });
-    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    const { send } = recordedFetch({ [facts("3")]: filing });
+    const client = createEdgarConnector(send, UA);
     await expect(client.fetchFundamentals("3")).resolves.toBeDefined();
   });
 });

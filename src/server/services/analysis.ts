@@ -51,6 +51,11 @@ export interface Freshness {
   expired: boolean;
 }
 
+// Market freshness also says which service supplied the data; null when the stored payload does not say.
+export interface MarketFreshness extends Freshness {
+  service: "tiingo" | "fmp" | null;
+}
+
 export interface AnalysisView {
   ticker: string;
   criteriaVersion: string;
@@ -58,7 +63,7 @@ export interface AnalysisView {
   result: AnalysisResult;
   summary: { price: number | null; dividendYield: number | null };
   history: HistoryPoint[];
-  freshness: { edgar: Freshness | null; fmp: Freshness | null };
+  freshness: { edgar: Freshness | null; fmp: MarketFreshness | null };
   verdict: VerdictResult;
   narrative: Narrative;
 }
@@ -66,6 +71,20 @@ export interface AnalysisView {
 // Cache entries record when data was fetched and when it expires; the UI shows both.
 const toFreshness = (entry: { fetchedAt: string; expiresAt: string } | undefined): Freshness | null =>
   entry ? { fetchedAt: entry.fetchedAt, expired: Date.now() >= Date.parse(entry.expiresAt) } : null;
+
+// The market:<ticker> payload carries the service that answered; a payload that cannot be read gives null.
+const toMarketFreshness = (entry: { fetchedAt: string; expiresAt: string; payload: string } | undefined): MarketFreshness | null => {
+  const base = toFreshness(entry);
+  if (!entry || !base) return null;
+  let service: MarketFreshness["service"] = null;
+  try {
+    const parsed = JSON.parse(entry.payload) as { service?: unknown };
+    if (parsed.service === "tiingo" || parsed.service === "fmp") service = parsed.service;
+  } catch {
+    // an unreadable payload only means the source is unknown
+  }
+  return { ...base, service };
+};
 
 const SOURCES: Record<string, string[]> = {
   roeAverage10y: ["SEC EDGAR"],
@@ -259,7 +278,8 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
     dividendPerShare: y.dividendPerShare,
   }));
 
-  const fmpEntry = repos.cache.get(`fmp:prices:${ticker}`);
+  // Market data (prices and dividends) comes from whichever service answered; the field keeps the name fmp for the UI.
+  const fmpEntry = repos.cache.get(`market:${ticker}`);
   const edgarEntry = company.cik ? repos.cache.get(`edgar:facts:${company.cik}`) : undefined;
 
   const result = evaluate(metrics, CRITERIA_V2);
@@ -277,6 +297,6 @@ export function buildAnalysis(ticker: string, deps: { repos: Repositories }): An
       dividendYield: latestDividend !== null && currentPrice ? latestDividend / currentPrice : null,
     },
     history,
-    freshness: { edgar: toFreshness(edgarEntry), fmp: toFreshness(fmpEntry) },
+    freshness: { edgar: toFreshness(edgarEntry), fmp: toMarketFreshness(fmpEntry) },
   };
 }

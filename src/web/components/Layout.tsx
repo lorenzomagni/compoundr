@@ -7,6 +7,7 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: "/", label: "Esplora", icon: "compass" },
   { to: "/watchlist", label: "Watchlist", icon: "bookmark" },
   { to: "/confronto", label: "Confronto", icon: "scale" },
+  { to: "/utilizzo", label: "Utilizzo API", icon: "chart" },
 ];
 
 export function Layout() {
@@ -37,21 +38,21 @@ export function Layout() {
           </nav>
           <div className="app-header-tools">
             {data && (
-              <span className={`source-pill ${data.fmpKeyConfigured ? "source-ok" : "source-partial"}`} title="Fonti dati attive">
+              <span className={`source-pill ${data.marketKeyConfigured ? "source-ok" : "source-partial"}`} title="Fonti dati attive">
                 <span className="source-dot" aria-hidden="true" />
-                {data.fmpKeyConfigured ? "SEC + FMP" : "Solo SEC"}
+                {data.marketKeyConfigured ? "SEC + mercato" : "Solo SEC"}
               </span>
             )}
             <ThemeToggle />
           </div>
         </div>
       </header>
-      {data && !data.fmpKeyConfigured && (
+      {data && !data.marketKeyConfigured && (
         <aside aria-label="Configurazione" className="setup-notice">
           <div className="setup-notice-inner">
             <Icon name="key" size={16} />
             <span>
-              Chiave FMP non configurata: prezzi e dividendi non sono disponibili. <Link to="/setup">Come configurarla</Link>
+              Nessuna chiave dati di mercato (Tiingo o FMP) configurata: prezzi e dividendi non sono disponibili. <Link to="/setup">Come configurarla</Link>
             </span>
           </div>
         </aside>
@@ -61,7 +62,7 @@ export function Layout() {
       </main>
       <footer className="app-footer">
         <span>Compoundr · analisi locale, i dati restano sul tuo computer.</span>
-        <span className="muted">Fonti: SEC EDGAR · Financial Modeling Prep</span>
+        <span className="muted">Fonti: SEC EDGAR · Tiingo · Financial Modeling Prep</span>
       </footer>
     </div>
   );

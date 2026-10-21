@@ -3,7 +3,7 @@ import { Tabs } from "radix-ui";
 import { useAnalysis, useCompanies, useRefreshCompany, useSaveSnapshot, useSnapshots } from "../api/hooks";
 import { ScoreBadge } from "../components/ScoreBadge";
 import { MetricCard } from "../components/MetricCard";
-import { StaleBanner } from "../components/StaleBanner";
+import { StaleBanner, marketSourceText } from "../components/StaleBanner";
 import { StatusChip } from "../components/StatusChip";
 import { formatDate, formatPercent } from "../format";
 import { AnalysisPanel } from "../components/AnalysisPanel";
@@ -43,6 +43,7 @@ export function CompanyDetail() {
 
   const { score } = data.result;
   const verdict = score.evaluated === 0 ? null : score.pass === score.evaluated ? "pass" : score.pass === 0 ? "fail" : "na";
+  const marketSource = marketSourceText(data.freshness.fmp?.service);
   const lastFetched = [data.freshness.edgar?.fetchedAt, data.freshness.fmp?.fetchedAt].filter((d): d is string => !!d).sort().at(-1);
 
   return (
@@ -65,6 +66,7 @@ export function CompanyDetail() {
           <p className="muted hero-meta">
             Criteri versione {data.criteriaVersion}
             {lastFetched && <> · Dati del {formatDate(lastFetched)}</>}
+            {marketSource && <> · {marketSource}</>}
           </p>
         </div>
         <dl className="detail-kpis">
@@ -96,10 +98,10 @@ export function CompanyDetail() {
             {(refresh.error as Error).message}
           </span>
         )}
-        {refresh.data?.sources.fmp === "missing" && (
+        {refresh.data?.sources.prices.state === "missing" && (
           <p role="status" className="notice notice-info">
             <Icon name="info" size={16} />
-            <span>Prezzi e dividendi non disponibili per questo titolo: il piano gratuito di FMP non li include. I bilanci SEC sono aggiornati.</span>
+            <span>Prezzi e dividendi non disponibili per questo titolo: nessun servizio dati di mercato ha risposto. I bilanci SEC sono aggiornati.</span>
           </p>
         )}
       </div>

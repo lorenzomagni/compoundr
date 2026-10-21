@@ -28,6 +28,6 @@ export function seedKo(repos: Repositories, opts: { dividends: { exDate: string;
   repos.prices.upsertMany("KO", [
     { date: "2024-06-03", close: 60 },
     { date: "2024-12-30", close: 62 },
-  ]);
-  repos.dividends.upsertMany("KO", opts.dividends);
+  ], "fmp");
+  repos.dividends.upsertMany("KO", opts.dividends, "fmp");
 }

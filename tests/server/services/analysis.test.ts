@@ -49,10 +49,33 @@ describe("buildAnalysis", () => {
 
   it("freshness reports when market data was fetched and whether it has expired", () => {
     seedKo(repos, { dividends: [] });
-    repos.cache.set("fmp:prices:KO", "[]", "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
+    const payload = JSON.stringify({ service: "tiingo", prices: [], dividends: [] });
+    repos.cache.set("market:KO", payload, "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
     const view = buildAnalysis("KO", { repos });
-    expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true });
+    // The field keeps the name fmp for the UI; it now means "market data freshness".
+    expect(view.freshness.fmp).toEqual({ fetchedAt: "2024-01-01T00:00:00.000Z", expired: true, service: "tiingo" });
     expect(view.freshness.edgar).toBeNull();
+  });
+
+  it("freshness reports a market entry still inside its TTL as not expired", () => {
+    seedKo(repos, { dividends: [] });
+    const now = Date.now();
+    const payload = JSON.stringify({ service: "fmp", prices: [], dividends: [] });
+    repos.cache.set("market:KO", payload, new Date(now - 1000).toISOString(), new Date(now + 3600_000).toISOString());
+    const view = buildAnalysis("KO", { repos });
+    expect(view.freshness.fmp?.expired).toBe(false);
+    expect(view.freshness.fmp?.service).toBe("fmp");
+  });
+
+  it("freshness has a null service when there is no market entry", () => {
+    seedKo(repos, { dividends: [] });
+    expect(buildAnalysis("KO", { repos }).freshness.fmp).toBeNull();
+  });
+
+  it("freshness ignores the old fmp:prices cache key", () => {
+    seedKo(repos, { dividends: [] });
+    repos.cache.set("fmp:prices:KO", "[]", "2024-01-01T00:00:00.000Z", "2024-01-02T00:00:00.000Z");
+    expect(buildAnalysis("KO", { repos }).freshness.fmp).toBeNull();
   });
 
   it("payout ratio compares dividend per share with earnings per share", () => {
@@ -104,7 +127,7 @@ describe("buildAnalysis", () => {
     repos.fundamentals.upsertMany(
       rows.map(([concept, value]) => ({ ticker: "NOSH", fiscalYear: 2024, concept, value, form: "10-K", filedAt: "2025-02-15" })),
     );
-    repos.prices.upsertMany("NOSH", [{ date: "2024-12-30", close: 50 }]);
+    repos.prices.upsertMany("NOSH", [{ date: "2024-12-30", close: 50 }], "fmp");
     const view = buildAnalysis("NOSH", { repos });
     expect(view.metrics.find((x) => x.id === "altmanZ")!.status).toBe("missing");
     const z = view.result.criteria.find((c) => c.id === "altmanZ")!;
@@ -177,8 +200,8 @@ describe("buildAnalysis", () => {
         .filter((r) => r.concept !== "CommonStockDividendsPerShareDeclared")
         .map((r) => ({ ticker: "KO", ...r })),
     );
-    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }]);
-    repos.dividends.upsertMany("KO", [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map((y) => ({ exDate: `${y}-03-14`, amount: 1 })));
+    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }], "fmp");
+    repos.dividends.upsertMany("KO", [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map((y) => ({ exDate: `${y}-03-14`, amount: 1 })), "fmp");
     const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "fcfCoverageMin5y")!;
     expect(m.status).toBe("ok");
     // FCF per share = 9000 / 4300, dividend per share = 1.
@@ -192,7 +215,7 @@ describe("buildAnalysis", () => {
         .filter((r) => r.concept !== "WeightedAverageNumberOfDilutedSharesOutstanding")
         .map((r) => ({ ticker: "KO", ...r })),
     );
-    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }]);
+    repos.prices.upsertMany("KO", [{ date: "2024-12-30", close: 62 }], "fmp");
     const m = buildAnalysis("KO", { repos }).metrics.find((x) => x.id === "payoutFcf")!;
     expect(m.status).toBe("not_applicable");
   });
