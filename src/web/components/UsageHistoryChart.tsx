@@ -24,7 +24,9 @@ export function zeroFillHistory(history: HistoryRow[], service: string, generate
 }
 
 export function UsageHistoryChart({ history, services, generatedAt }: { history: HistoryRow[]; services: ServiceLimits[]; generatedAt: string }) {
-  const names = services.map((s) => s.name).filter((n) => history.some((h) => h.service === n && h.sent > 0));
+  const names = services.map((s) => s.name).filter(
+    (n) => history.some((h) => h.service === n && h.sent > 0) || services.find((s) => s.name === n)!.windows.some((w) => w.name === "day"),
+  );
   const series = names.map((name, i) => {
     const dayMax = services.find((s) => s.name === name)?.windows.find((w) => w.name === "day")?.max ?? null;
     return { name, color: COLORS[i % COLORS.length]!, dayMax, points: zeroFillHistory(history, name, generatedAt) };

@@ -57,4 +57,16 @@ describe("UsageHistoryChart", () => {
     expect(screen.queryByTestId("limit-edgar")).toBeNull();
     expect(screen.getByTestId("legend-fmp")).toHaveTextContent("limite 250");
   });
+
+  it("draws a zero-filled series and a limit line for a day-window service with no calls", () => {
+    render(<UsageHistoryChart history={[{ day: "2026-10-20", service: "tiingo", sent: 40 }]} services={services} generatedAt="2026-10-21T10:00:00.000Z" />);
+    const fmp = screen.getByTestId("series-fmp");
+    const ys = fmp.getAttribute("points")!.split(" ").map((p) => p.split(",")[1]);
+    expect(ys).toHaveLength(30);
+    expect(new Set(ys).size).toBe(1);
+    expect(screen.getByTestId("limit-fmp")).toBeInTheDocument();
+    expect(screen.getByTestId("legend-fmp")).toHaveTextContent("limite 250");
+    expect(screen.queryByTestId("series-edgar")).toBeNull();
+    expect(screen.queryByTestId("limit-edgar")).toBeNull();
+  });
 });
