@@ -81,7 +81,7 @@ describe("Explore screen", () => {
   });
 
   it("shows a logo next to each ticker, keyed by the ticker", () => {
-    const { container } = renderWith([company("KO", "Coca-Cola", 5, 6)]);
+    renderWith([company("KO", "Coca-Cola", 5, 6)]);
     const cell = within(screen.getAllByRole("row")[1]!).getAllByRole("cell")[0]!;
     expect(cell.querySelector("img")).toHaveAttribute("src", "/logos/KO.png");
     expect(within(cell).getByRole("link")).toHaveTextContent("KO");

@@ -1,7 +1,7 @@
 # Company logos in the Explore table: design
 
 Date: 2026-10-21
-Status: approved in conversation, pending written review
+Status: approved
 
 ## Goal
 

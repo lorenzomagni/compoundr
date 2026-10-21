@@ -198,11 +198,14 @@
   padding: 2px 6px;
   margin-left: -6px;
   border-radius: 6px;
+  min-width: 0;
   transition: background var(--motion-fast), color var(--motion-fast);
 }
 .ticker-link:hover { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 span.ticker-link { margin-left: 0; padding: 0; }
 .ticker-cell { display: flex; align-items: center; gap: var(--space-2); }
+.company-logo-slot { display: inline-grid; flex: none; width: 24px; height: 24px; }
+.company-logo-slot > * { grid-area: 1 / 1; }
 .company-logo {
   width: 24px;
   height: 24px;
@@ -420,8 +423,8 @@ span.ticker-link { margin-left: 0; padding: 0; }
 .data-table td.num { font-variant-numeric: tabular-nums; font-weight: 500; }
 
 /* Virtualised rows are each their own table, so column widths must be fixed to line up with the header. */
-[data-col="ticker"] { width: 9%; }
-[data-col="name"] { width: 25%; }
+[data-col="ticker"] { width: 13%; }
+[data-col="name"] { width: 21%; }
 [data-col="sector"] { width: 19%; }
 [data-col="score"] { width: 14%; }
 [data-col="quality"], [data-col="dividend"], [data-col="valuation"] { width: 11%; }
@@ -710,8 +713,8 @@ code {
   .checklist-right { margin-left: 0; width: 100%; justify-content: space-between; }
   .checklist-value { text-align: left; }
   [data-col="sector"], [data-col="quality"], [data-col="dividend"], [data-col="valuation"] { display: none; }
-  [data-col="ticker"] { width: 24%; }
-  [data-col="name"] { width: 44%; }
+  [data-col="ticker"] { width: 30%; }
+  [data-col="name"] { width: 38%; }
   [data-col="score"] { width: 32%; }
 }
 

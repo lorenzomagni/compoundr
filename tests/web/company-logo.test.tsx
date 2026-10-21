@@ -33,4 +33,26 @@ describe("CompanyLogo", () => {
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toBe("CO");
   });
+
+  it("shows initials and the image while loading", () => {
+    const { container } = render(<CompanyLogo ticker="KO" name="Coca-Cola" />);
+    expect(container.querySelector("img")).toBeInTheDocument();
+    expect(container.textContent).toBe("CO");
+  });
+
+  it("keeps only the image once it has loaded", () => {
+    const { container } = render(<CompanyLogo ticker="KO" name="Coca-Cola" />);
+    fireEvent.load(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeInTheDocument();
+    expect(container.textContent).toBe("");
+  });
+
+  it("goes back to loading when the ticker changes after an error", () => {
+    const { container, rerender } = render(<CompanyLogo ticker="KO" name="Coca-Cola" />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    rerender(<CompanyLogo ticker="PEP" name="PepsiCo" />);
+    expect(container.querySelector("img")).toHaveAttribute("src", "/logos/PEP.png");
+    expect(container.textContent).toBe("PE");
+  });
 });
