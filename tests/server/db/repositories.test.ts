@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
 import { describe, it, expect, beforeEach } from "vitest";
 import { openDb } from "../../../src/server/db/schema";
 import { createRepositories, type ApiCallRow, type Repositories } from "../../../src/server/db/repositories";
@@ -46,10 +50,50 @@ describe("cache", () => {
 
 describe("prices and dividends", () => {
   it("upserts prices and dividends for a ticker and lists them back", () => {
-    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }]);
-    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }]);
-    expect(repos.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60 }]);
-    expect(repos.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49 }]);
+    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }], "fmp");
+    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }], "fmp");
+    expect(repos.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60, source: "fmp" }]);
+    expect(repos.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49, source: "fmp" }]);
+  });
+});
+
+describe("source column", () => {
+  const OLD_SCHEMA = `
+    CREATE TABLE prices (ticker TEXT NOT NULL, date TEXT NOT NULL, close REAL NOT NULL, PRIMARY KEY (ticker, date));
+    CREATE TABLE dividends (ticker TEXT NOT NULL, ex_date TEXT NOT NULL, amount REAL NOT NULL, PRIMARY KEY (ticker, ex_date));
+    INSERT INTO prices VALUES ('KO', '2024-01-02', 60);
+    INSERT INTO dividends VALUES ('KO', '2024-03-14', 0.49);
+  `;
+  const oldDbPath = () => {
+    const dir = mkdtempSync(join(tmpdir(), "compoundr-"));
+    const path = join(dir, "old.db");
+    const raw = new Database(path);
+    raw.exec(OLD_SCHEMA);
+    raw.close();
+    return path;
+  };
+
+  it("a database created before the migration gets source = 'fmp' on existing rows", () => {
+    const db = openDb(oldDbPath());
+    const old = createRepositories(db);
+    expect(old.prices.listForTicker("KO")).toEqual([{ date: "2024-01-02", close: 60, source: "fmp" }]);
+    expect(old.dividends.listForTicker("KO")).toEqual([{ exDate: "2024-03-14", amount: 0.49, source: "fmp" }]);
+    db.close();
+  });
+
+  it("upsertMany stores the given source", () => {
+    repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: 60 }], "tiingo");
+    repos.dividends.upsertMany("KO", [{ exDate: "2024-03-14", amount: 0.49 }], "tiingo");
+    expect(repos.prices.listForTicker("KO")[0]!.source).toBe("tiingo");
+    expect(repos.dividends.listForTicker("KO")[0]!.source).toBe("tiingo");
+  });
+
+  it("opening the same database twice does not fail", () => {
+    const path = oldDbPath();
+    openDb(path).close();
+    const again = openDb(path);
+    expect(createRepositories(again).prices.listForTicker("KO")[0]!.source).toBe("fmp");
+    again.close();
   });
 });
 
@@ -60,7 +104,7 @@ describe("withTransaction", () => {
         repos.fundamentals.upsertMany([
           { ticker: "KO", fiscalYear: 2024, concept: "NetIncomeLoss", value: 1, form: "10-K", filedAt: "2025-02-01" },
         ]);
-        repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: null as unknown as number }]);
+        repos.prices.upsertMany("KO", [{ date: "2024-01-02", close: null as unknown as number }], "fmp");
       }),
     ).toThrow(/NOT NULL|constraint/i);
     expect(repos.fundamentals.listForTicker("KO")).toHaveLength(0);

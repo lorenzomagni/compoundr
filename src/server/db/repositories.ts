@@ -24,11 +24,13 @@ export interface FundamentalRow {
 export interface PriceRow {
   date: string;
   close: number;
+  source?: string; // set when reading; on write the source comes from upsertMany
 }
 
 export interface DividendRow {
   exDate: string;
   amount: number;
+  source?: string; // set when reading; on write the source comes from upsertMany
 }
 
 export interface CacheEntry {
@@ -76,11 +78,11 @@ export interface Repositories {
     listForTicker(ticker: string): FundamentalRow[];
   };
   prices: {
-    upsertMany(ticker: string, rows: PriceRow[]): void;
+    upsertMany(ticker: string, rows: PriceRow[], source: "tiingo" | "fmp"): void;
     listForTicker(ticker: string): PriceRow[];
   };
   dividends: {
-    upsertMany(ticker: string, rows: DividendRow[]): void;
+    upsertMany(ticker: string, rows: DividendRow[], source: "tiingo" | "fmp"): void;
     listForTicker(ticker: string): DividendRow[];
   };
   cache: {
@@ -150,20 +152,20 @@ export function createRepositories(db: Database.Database): Repositories {
         })),
     },
     prices: {
-      upsertMany: (ticker, rows) => {
-        const stmt = db.prepare("INSERT OR REPLACE INTO prices (ticker, date, close) VALUES (?, ?, ?)");
-        for (const r of rows) stmt.run(ticker, r.date, r.close);
+      upsertMany: (ticker, rows, source) => {
+        const stmt = db.prepare("INSERT OR REPLACE INTO prices (ticker, date, close, source) VALUES (?, ?, ?, ?)");
+        for (const r of rows) stmt.run(ticker, r.date, r.close, source);
       },
       listForTicker: (ticker) =>
-        db.prepare("SELECT date, close FROM prices WHERE ticker = ? ORDER BY date").all(ticker) as PriceRow[],
+        db.prepare("SELECT date, close, source FROM prices WHERE ticker = ? ORDER BY date").all(ticker) as PriceRow[],
     },
     dividends: {
-      upsertMany: (ticker, rows) => {
-        const stmt = db.prepare("INSERT OR REPLACE INTO dividends (ticker, ex_date, amount) VALUES (?, ?, ?)");
-        for (const r of rows) stmt.run(ticker, r.exDate, r.amount);
+      upsertMany: (ticker, rows, source) => {
+        const stmt = db.prepare("INSERT OR REPLACE INTO dividends (ticker, ex_date, amount, source) VALUES (?, ?, ?, ?)");
+        for (const r of rows) stmt.run(ticker, r.exDate, r.amount, source);
       },
       listForTicker: (ticker) =>
-        db.prepare("SELECT ex_date AS exDate, amount FROM dividends WHERE ticker = ? ORDER BY ex_date").all(ticker) as DividendRow[],
+        db.prepare("SELECT ex_date AS exDate, amount, source FROM dividends WHERE ticker = ? ORDER BY ex_date").all(ticker) as DividendRow[],
     },
     withTransaction: <T>(fn: () => T): T => db.transaction(fn)(),
     cache: {

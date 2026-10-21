@@ -55,10 +55,11 @@ export async function refreshCompany(ticker: string, deps: RefreshDeps): Promise
   repos.withTransaction(() => {
     repos.fundamentals.upsertMany(edgarEntry.value.map((r) => ({ ticker, ...r, filedAt: r.filedAt })));
     if (fmpState !== "missing" || prices.length > 0) {
-      repos.prices.upsertMany(ticker, prices.map((p) => ({ date: p.date, close: p.close })));
+      repos.prices.upsertMany(ticker, prices.map((p) => ({ date: p.date, close: p.close })), "fmp");
       repos.dividends.upsertMany(
         ticker,
         dividends.filter((d) => d.dividend !== null).map((d) => ({ exDate: d.date, amount: d.dividend! })),
+        "fmp",
       );
     }
   });
