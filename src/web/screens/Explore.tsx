@@ -40,12 +40,12 @@ const columns = [
   columnHelper.accessor("ticker", {
     header: "Ticker",
     cell: (info) => (
-      <>
+      <div className="ticker-cell">
         <CompanyLogo key={info.getValue()} ticker={info.getValue()} name={info.row.original.name} />
         <Link to={`/companies/${info.getValue()}`} className="ticker-link">
           {info.getValue()}
         </Link>
-      </>
+      </div>
     ),
   }),
   columnHelper.accessor("name", { header: "Nome" }),
