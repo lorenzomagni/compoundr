@@ -15,7 +15,7 @@ const UNAVAILABLE = [
 
 const STEPS: { title: string; detail: ReactNode }[] = [
   { title: "Copia il file di esempio", detail: <>Copia <code>config/local.example.json</code> in <code>config/local.json</code>.</> },
-  { title: "Inserisci la chiave", detail: <>Incolla la tua chiave nel campo <code>fmpApiKey</code>. Il file resta sul tuo computer.</> },
+  { title: "Inserisci la chiave", detail: <>Incolla la tua chiave nel campo <code>fmpApiKey</code>; se hai anche la chiave Tiingo, inseriscila in <code>tiingoApiKey</code>. Il file resta sul tuo computer.</> },
   { title: "Riavvia il server locale", detail: "Al riavvio Compoundr rileva la chiave e abilita prezzi e dividendi." },
 ];
 

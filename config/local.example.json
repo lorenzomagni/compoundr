@@ -1,5 +1,6 @@
 {
   "fmpApiKey": "LA_TUA_CHIAVE_FMP",
+  "tiingoApiKey": "INCOLLA_QUI_LA_TUA_CHIAVE_TIINGO",
   "edgarUserAgent": "Compoundr tuo.nome@example.com",
   "dbPath": "data/compoundr.db",
   "port": 3000
