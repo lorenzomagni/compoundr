@@ -6,7 +6,10 @@ import type { EdgarConnector } from "../providers/edgar";
 import type { FmpClient } from "../providers/fmp";
 import { buildAnalysis } from "../services/analysis";
 import { refreshCompany } from "../services/refresh";
-import { createGateway } from "../gateway/gateway";
+import { createGateway, type Gateway } from "../gateway/gateway";
+import type { ServiceName } from "../gateway/rules";
+import { usageFor } from "../gateway/usage";
+import { buildUsageView } from "../gateway/usage-view";
 import { refreshUniverse } from "../services/universe";
 
 export interface ApiDeps {
@@ -18,6 +21,10 @@ export interface ApiDeps {
   // Used to read the public S&P 500 list; the User-Agent identifies the app with a contact, as Wikipedia asks.
   userAgent: string;
   fetchFn?: typeof fetch;
+  gateway: Gateway;
+  // Which services have a key: /api/usage reports only whether one is set, never its value.
+  keys?: Partial<Record<ServiceName, string | null>>;
+  now?: () => Date;
 }
 
 const WatchlistInput = z.object({
@@ -37,7 +44,8 @@ const withoutCatalog = (metrics: { catalog?: unknown }[]) =>
   metrics.map(({ catalog: _catalog, ...m }) => m);
 
 export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
-  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent } = deps;
+  const { repos, cache, edgar, fmp, apiKeyConfigured, userAgent, keys } = deps;
+  const now = deps.now ?? (() => new Date());
   const app = Fastify({ logger: false });
 
   // Errors are returned with a message only, never stack traces or request data.
@@ -153,11 +161,16 @@ export async function buildServer(deps: ApiDeps): Promise<FastifyInstance> {
     return reply.code(204).send();
   });
 
-  app.get("/api/status", async () => ({
-    fmpKeyConfigured: apiKeyConfigured,
-    fmpQuotaRemaining: fmp.quotaRemaining(),
-    edgarOk: true,
-  }));
+  app.get("/api/usage", async () => buildUsageView(repos, keys ?? {}, now()));
+
+  app.get("/api/status", async () => {
+    const day = usageFor("fmp", repos, now()).find((w) => w.name === "day");
+    return {
+      fmpKeyConfigured: apiKeyConfigured,
+      fmpQuotaRemaining: day ? Math.max(0, day.max - day.used) : 0,
+      edgarOk: true,
+    };
+  });
 
   return app;
 }

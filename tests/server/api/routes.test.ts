@@ -3,6 +3,7 @@ import { openDb } from "../../../src/server/db/schema";
 import { createRepositories, type Repositories } from "../../../src/server/db/repositories";
 import { createCache } from "../../../src/server/providers/cache";
 import { buildServer } from "../../../src/server/api/routes";
+import { createGateway } from "../../../src/server/gateway/gateway";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { seedKo } from "../services/fixtures";
@@ -31,6 +32,7 @@ beforeEach(async () => {
     fmp: fakeFmp(),
     apiKeyConfigured: true,
     userAgent: "Compoundr test test@example.com",
+    gateway: createGateway({ repos, keys: {} }),
     // The universe test must not reach the network: the bundled snapshot is used instead.
     fetchFn: (async () => {
       throw new Error("offline");
@@ -146,6 +148,7 @@ describe("local HTTP API", () => {
       fmp: fakeFmp(),
       apiKeyConfigured: true,
       userAgent: "Compoundr test test@example.com",
+      gateway: createGateway({ repos, keys: {} }),
     });
     seedKo(repos, { dividends: [] });
     const res = await failing.inject({ method: "POST", url: "/api/companies/KO/refresh" });

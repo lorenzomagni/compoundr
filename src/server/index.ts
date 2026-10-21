@@ -6,6 +6,7 @@ import { createEdgarConnector } from "./providers/edgar";
 import { createRateLimiter } from "./providers/rate-limiter";
 import { createFmpClient } from "./providers/fmp";
 import { buildServer } from "./api/routes";
+import { createGateway } from "./gateway/gateway";
 
 // The server listens on 127.0.0.1 only: the app is local and the API must not be reachable from the network.
 async function main() {
@@ -18,6 +19,14 @@ async function main() {
   const edgar = createEdgarConnector((fn, isRetryable) => edgarLimiter.run(fn, isRetryable), config.edgarUserAgent);
   const fmp = createFmpClient({ apiKey: config.fmpApiKey, cache: repos.cache });
 
+  const keys = {
+    tiingo: config.tiingoApiKey,
+    fmp: config.fmpApiKey,
+    edgar: config.edgarUserAgent,
+    wikipedia: config.edgarUserAgent,
+  };
+  const gateway = createGateway({ repos, keys });
+
   const app = await buildServer({
     repos,
     cache,
@@ -25,6 +34,8 @@ async function main() {
     fmp,
     apiKeyConfigured: config.fmpApiKey !== null,
     userAgent: config.edgarUserAgent,
+    gateway,
+    keys,
   });
   await app.listen({ host: "127.0.0.1", port: config.port });
   console.log(`Compoundr in ascolto su http://127.0.0.1:${config.port}`);
