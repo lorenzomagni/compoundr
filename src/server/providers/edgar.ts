@@ -63,7 +63,8 @@ const Fact = z.object({
 });
 const Concept = z.object({ label: z.string().nullish(), units: z.record(z.string(), z.array(Fact)) });
 const CompanyFacts = z.object({
-  cik: z.number(),
+  // The SEC sends cik as a number for some filers and as a zero-padded string for others; it is not used.
+  cik: z.union([z.number(), z.string()]),
   entityName: z.string().optional(),
   facts: z.object({
     "us-gaap": z.record(z.string(), Concept).optional(),

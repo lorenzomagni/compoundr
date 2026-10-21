@@ -96,6 +96,15 @@ describe("edgar solidity concepts", () => {
   });
 });
 
+describe("edgar cik type", () => {
+  it("accepts a cik sent as a zero-padded string, as the live API does for some filers", async () => {
+    const filing = { cik: "0001858681", entityName: "Synthetic", facts: { "us-gaap": {}, dei: {} } };
+    const { fetchFn } = recordedFetch({ [facts("1858681")]: filing });
+    const client = createEdgarClient({ userAgent: "Compoundr test lorenzo.magni@lutech.it", fetch: fetchFn, perSecond: 100 });
+    expect(await client.fetchFundamentals("1858681")).toEqual([]);
+  });
+});
+
 describe("edgar dei facts without a fiscal year", () => {
   it("produces no row for a dei fact whose fy is null", async () => {
     const filing = {
