@@ -7,6 +7,7 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: "/", label: "Esplora", icon: "compass" },
   { to: "/watchlist", label: "Watchlist", icon: "bookmark" },
   { to: "/confronto", label: "Confronto", icon: "scale" },
+  { to: "/utilizzo", label: "Utilizzo API", icon: "chart" },
 ];
 
 export function Layout() {
@@ -61,7 +62,7 @@ export function Layout() {
       </main>
       <footer className="app-footer">
         <span>Compoundr · analisi locale, i dati restano sul tuo computer.</span>
-        <span className="muted">Fonti: SEC EDGAR · Financial Modeling Prep</span>
+        <span className="muted">Fonti: SEC EDGAR · Tiingo · Financial Modeling Prep</span>
       </footer>
     </div>
   );

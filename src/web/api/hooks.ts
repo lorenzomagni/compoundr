@@ -7,6 +7,7 @@ export const queryKeys = {
   watchlist: ["watchlist"] as const,
   status: ["status"] as const,
   snapshots: (ticker: string) => ["snapshots", ticker] as const,
+  usage: ["usage"] as const,
 };
 
 export function useCompanies() {
@@ -64,6 +65,10 @@ export function useStatus() {
   return useQuery({ queryKey: queryKeys.status, queryFn: () => api.get<StatusResponse>("/status") });
 }
 
+export function useUsage() {
+  return useQuery({ queryKey: queryKeys.usage, queryFn: () => api.get<UsageResponse>("/usage"), refetchInterval: 30_000 });
+}
+
 // Response shapes mirror the server; kept local so the browser bundle does not import server code.
 export interface CompanySummary {
   ticker: string;
@@ -106,6 +111,20 @@ export interface SnapshotSummary {
   ticker: string;
   createdAt: string;
   criteriaVersion: string;
+}
+
+export interface UsageResponse {
+  generatedAt: string;
+  services: {
+    name: string;
+    role: string;
+    configured: boolean;
+    windows: { name: string; used: number; max: number; ratio: number; resetsAt: string | null }[];
+    lastOutcome: { outcome: string; at: string } | null;
+    fallbacks24h: number;
+  }[];
+  topSaturation: { service: string; window: string; ratio: number } | null;
+  history: { day: string; service: string; sent: number }[];
 }
 
 export interface StatusResponse {
